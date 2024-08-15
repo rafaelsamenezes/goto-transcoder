@@ -1,4 +1,4 @@
-use log::{error, info, trace};
+use log::{debug, error, info, trace};
 use std::collections::HashMap;
 use std::env;
 use std::fs;
@@ -7,12 +7,14 @@ use std::str;
 // TODO: Beter
 // TODO: Better error handling
 // TODO: Cache lookup functions
+use env_logger::Env;
 
 #[derive(Clone, Debug)]
 struct Irept {
     id: String,
     subt: Vec<Irept>,
     named_subt: HashMap<String, Irept>,
+    comments: HashMap<String, Irept>,
 }
 
 struct ByteReader {
@@ -29,12 +31,66 @@ impl ByteReader {
             return self.irep_container.get(&id).unwrap().clone();
         }
 
-        // TODO: read_irep
-        Irept {
-            id: String::new(),
-            subt: Vec::new(),
-            named_subt: HashMap::new(),
+        let irep_id = self.read_string_ref();
+        debug!("Got id {}", irep_id);
+
+        let mut irep_sub: Vec<Irept> = Vec::new();
+        let mut named_sub: HashMap<String, Irept> = HashMap::new();
+        let mut comments_sub: HashMap<String, Irept> = HashMap::new();
+
+        // Sub-expression
+        while self.peek() == b'S' {
+            self.pointer += 1;
+            let sub = self.read_reference();
+            irep_sub.push(sub);
         }
+
+        debug!("Got sub {:?}", irep_sub);
+
+        // Named sub
+        while self.peek() == b'N' {
+            self.pointer += 1;
+            let named_id = self.read_string_ref();
+            // TODO: assert named_id[0] != '#'
+            named_sub.insert(named_id, self.read_reference());
+        }
+
+        debug!("Got namedsub {:?}", named_sub);
+
+        // Comment?
+        while self.peek() == b'C' {
+            self.pointer += 1;
+            let named_id = self.read_string_ref();
+            // TODO: assert named_id[0] == '#'
+            comments_sub.insert(named_id, self.read_reference());
+        }
+
+        debug!("Got comments {:?}", comments_sub);
+
+        let end_value = self.get();
+        if end_value != 0 {
+            panic!("Irep not terminated. Got {}", end_value);
+        }
+
+        let result = Irept {
+            id: irep_id,
+            subt: irep_sub,
+            named_subt: named_sub,
+            comments: comments_sub,
+        };
+
+        self.irep_container.insert(id, result.clone());
+        result
+    }
+
+    fn peek(&self) -> u8 {
+        self.file[self.pointer]
+    }
+
+    fn get(&mut self) -> u8 {
+        let value = self.file[self.pointer];
+        self.pointer += 1;
+        value
     }
 
     fn read_string_ref(&mut self) -> String {
@@ -102,6 +158,11 @@ fn read_file_as_bytes(path: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>>
 }
 
 fn main() {
+    let env = Env::default()
+        .filter_or("MY_LOG_LEVEL", "trace")
+        .write_style_or("MY_LOG_STYLE", "always");
+
+    env_logger::init_from_env(env);
     // Input read
     let args: Vec<String> = env::args().collect();
     let file_name = &args[1];
@@ -117,7 +178,6 @@ fn main() {
     };
 
     // Check format
-
     if !reader.check_header() {
         error!("GOTO file in wrong enconding. Exiting");
         return;
@@ -131,7 +191,11 @@ fn main() {
     info!("Good to go!");
 
     // Symbol table
-    let _number_of_symbols = reader.read_u32();
+    let number_of_symbols = reader.read_u32();
+    let symbols: Vec<Irept> = (0..number_of_symbols)
+        .map(|_x| reader.read_reference())
+        .collect();
+    info!("Got {}. Expected {}", number_of_symbols, symbols.len());
 
     // Functions
     let _number_of_functions = reader.read_u32();

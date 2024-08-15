@@ -3,10 +3,10 @@ use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::str;
-// TODO: Read symbols
-// TODO: Beter
+
 // TODO: Better error handling
 // TODO: Cache lookup functions
+
 use env_logger::Env;
 
 #[derive(Clone, Debug)]
@@ -150,6 +150,10 @@ impl ByteReader {
         // ESBMC generates this in BE form
         u32::from_be_bytes(raw_bytes)
     }
+
+    // fn read_function(&mut self) -> (String, Irept) {
+    //     let name = self.read_string_ref()
+    // }
 }
 
 fn read_file_as_bytes(path: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {

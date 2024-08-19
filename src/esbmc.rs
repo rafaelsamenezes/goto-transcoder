@@ -1,5 +1,6 @@
 use crate::ByteReader;
 pub use crate::Irept;
+
 #[derive(Clone, Debug)]
 pub struct Symbol {
     t: Irept,
@@ -47,12 +48,20 @@ impl std::fmt::Display for Symbol {
     }
 }
 
+
+
 #[derive(Clone, Debug)]
 pub struct Function {
     name: String,
-    body: Option<Vec<Irept>>
+    body: Option<Irept>
 }
 
+
+impl std::fmt::Display for Function {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Function: {}", self.name)
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct ESBMCParser {
@@ -106,9 +115,16 @@ pub fn process_file(path: &str) -> Result<ESBMCParser, ESBMCParserError> {
     }
 
     // Functions
-    let _number_of_functions = result.reader.read_u32();
+    let number_of_functions = result.reader.read_u32();
+    for _ in 0..number_of_functions {
+        let foo = Function{ name: result.reader.read_string(), body: Some(result.reader.read_reference())};
+        result.functions.push(foo);
+    }
+
     return Ok(result);
 }
+
+
 
 #[test]
 fn test_file() {
@@ -125,7 +141,11 @@ fn test_file() {
     assert!(test_path.exists());
 
     let result = process_file(test_path.to_str().unwrap()).unwrap();
-    for s in result.symbols {
+     for s in result.symbols {
         log::debug!("{}", s);
+    }
+
+     for f in result.functions {
+        log::debug!("{}", f);
     }
 }

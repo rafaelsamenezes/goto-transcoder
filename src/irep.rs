@@ -7,6 +7,24 @@ pub struct Irept {
     pub comments: HashMap<String, Irept>,
 }
 
+impl std::hash::Hash for Irept {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+        for irep in &self.subt {
+            irep.hash(state);
+        }
+        for (name, irep) in &self.named_subt {
+            name.hash(state);
+            irep.hash(state);
+        }
+        for (name, irep) in &self.comments {
+            name.hash(state);
+            irep.hash(state);
+        }
+    }
+}
+
+
 impl Irept {
     fn find(&self, id: &String) -> Irept {
         let result = match self.named_subt.get(id) {
@@ -15,6 +33,8 @@ impl Irept {
         };
         result
     }
+
+    
     pub fn get_type(&self) -> Irept {
         self.find(&String::from("type"))
     }

@@ -76,6 +76,27 @@ impl ByteReader {
         value
     }
 
+    pub fn read_string(&mut self) -> String {
+        let mut bytes = Vec::<u8>::new();
+        while self.file[self.pointer] != 0 {
+            let c = self.file[self.pointer];
+            self.pointer += 1;
+            if c == b'\\'{
+                bytes.push(self.file[self.pointer]);
+                self.pointer += 1;
+            }
+            else {
+                bytes.push(c);
+            }            
+        }
+        self.pointer += 1;
+        let value = match str::from_utf8(&bytes) {
+            Ok(v) => v.to_string(),
+            Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
+        };
+        value       
+    }
+
     pub fn read_string_ref(&mut self) -> String {
         let id = self.read_u32();
 
@@ -151,3 +172,24 @@ impl From<Vec<u8>> for ByteReader {
     }
 }
 
+pub struct ByteWritter {
+    file: Vec<u8>,
+    irep_container: HashMap<Irept, u32>,
+    string_ref_container: HashMap<String, u32>,    
+}
+
+
+impl ByteWritter {
+    pub fn write_string(&mut self, value: &str) {
+        
+    }
+
+    pub fn write_u32(&mut self, value: &u32) {
+        
+    }
+
+    pub fn write_irep(&mut self, value: &Irept) {}
+
+    pub fn write_reference(&mut self, value: &Irept) {}
+    pub fn write_string_reference(&mut self, value: &str) {}
+}

@@ -1,11 +1,8 @@
-use log::trace;
-use log::error;
-use std::str;
-use std::fs;
-use std::collections::HashMap;
-use crate::esbmc::ESBMCParser;
-use crate::esbmc::ESBMCParserError;
 pub use crate::Irept;
+use log::{error,trace,debug};
+use std::collections::HashMap;
+use std::fs;
+use std::str;
 
 #[derive(Clone, Debug)]
 pub struct ByteReader {
@@ -13,6 +10,17 @@ pub struct ByteReader {
     pointer: usize,
     irep_container: HashMap<u32, Irept>,
     string_ref_container: HashMap<u32, String>,
+}
+
+impl From<Vec<u8>> for ByteReader {
+    fn from(data: Vec<u8>) -> Self {
+        ByteReader {
+            file: data,
+            pointer: 0,
+            irep_container: HashMap::new(),
+            string_ref_container: HashMap::new(),
+        }
+    }
 }
 
 impl ByteReader {
@@ -63,6 +71,7 @@ impl ByteReader {
         };
 
         self.irep_container.insert(id, result.clone());
+        debug!("{}", result);
         result
     }
 
@@ -81,20 +90,19 @@ impl ByteReader {
         while self.file[self.pointer] != 0 {
             let c = self.file[self.pointer];
             self.pointer += 1;
-            if c == b'\\'{
+            if c == b'\\' {
                 bytes.push(self.file[self.pointer]);
                 self.pointer += 1;
-            }
-            else {
+            } else {
                 bytes.push(c);
-            }            
+            }
         }
         self.pointer += 1;
         let value = match str::from_utf8(&bytes) {
             Ok(v) => v.to_string(),
             Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
         };
-        value       
+        value
     }
 
     pub fn read_string_ref(&mut self) -> String {
@@ -156,40 +164,9 @@ impl ByteReader {
     }
 
     pub fn read_file(path: &str) -> Self {
+        trace!("Reading goto file: {}", path);
         let byte_content = fs::read(path).expect("Could not read file");
         ByteReader::from(byte_content)
     }
 }
 
-impl From<Vec<u8>> for ByteReader {
-    fn from(data: Vec<u8>) -> Self {
-        ByteReader {
-            file: data,
-            pointer: 0,
-            irep_container: HashMap::new(),
-            string_ref_container: HashMap::new(),
-        }
-    }
-}
-
-pub struct ByteWritter {
-    file: Vec<u8>,
-    irep_container: HashMap<Irept, u32>,
-    string_ref_container: HashMap<String, u32>,    
-}
-
-
-impl ByteWritter {
-    pub fn write_string(&mut self, value: &str) {
-        
-    }
-
-    pub fn write_u32(&mut self, value: &u32) {
-        
-    }
-
-    pub fn write_irep(&mut self, value: &Irept) {}
-
-    pub fn write_reference(&mut self, value: &Irept) {}
-    pub fn write_string_reference(&mut self, value: &str) {}
-}

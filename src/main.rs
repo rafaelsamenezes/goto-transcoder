@@ -1,12 +1,3 @@
-use esbmc::ESBMCParser;
-use log::{debug, error, info, trace};
-use std::collections::HashMap;
-use std::env::{self, VarError};
-
-// TODO: More functional code when possible
-// TODO: Better error handling (learn optional)
-// TODO: Cache lookup functions
-
 use env_logger::Env;
 
 pub mod irep;
@@ -15,8 +6,8 @@ pub use irep::Irept;
 pub mod bytereader;
 pub use bytereader::ByteReader;
 
-pub mod esbmc;
-pub use esbmc::Symbol;
+pub mod bytewriter;
+pub use bytewriter::ByteWriter;
 
 fn init() {
     let env = Env::default()
@@ -28,13 +19,7 @@ fn init() {
 
 
 fn main() {
-    init();
-
-    // Input read
-    let args: Vec<String> = env::args().collect();
-    let file_name = &args[1];
-
-    
+    init();    
 }
 
 

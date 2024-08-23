@@ -82,3 +82,22 @@ fn test_file() {
     let result = process_file(test_path.to_str().unwrap()).unwrap();    
     ByteWriter::write_to_file(result.symbols_irep, result.functions_irep, "test.goto");
 }
+
+use crate::sql::SqlWriter;
+#[test]
+fn test_sql_file() {
+    // let env = env_logger::Env::default()
+    //     .filter_or("MY_LOG_LEVEL", "trace")
+    //     .write_style_or("MY_LOG_STYLE", "always");
+
+    // env_logger::init_from_env(env);
+    let cargo_dir = match std::env::var("CARGO_MANIFEST_DIR") {
+        Ok(v) => v,
+        Err(err) => panic!("Could not open cargo folder. {}", err),
+    };
+    let test_path = std::path::Path::new(&cargo_dir).join("resources/test/hello.goto");
+    assert!(test_path.exists());
+
+    let result = process_file(test_path.to_str().unwrap()).unwrap();    
+    SqlWriter::write_to_file(result.symbols_irep, result.functions_irep, "test.sqlite");
+}

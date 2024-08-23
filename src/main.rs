@@ -9,6 +9,9 @@ pub use bytereader::ByteReader;
 pub mod bytewriter;
 pub use bytewriter::ByteWriter;
 
+pub mod sql;
+
+pub mod esbmc;
 fn init() {
     let env = Env::default()
         .filter_or("MY_LOG_LEVEL", "trace")
@@ -16,7 +19,6 @@ fn init() {
 
     env_logger::init_from_env(env);
 }
-
 
 fn main() {
     init();    

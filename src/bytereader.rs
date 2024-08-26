@@ -87,21 +87,16 @@ impl ByteReader {
 
     pub fn read_string(&mut self) -> String {
         let mut bytes = Vec::<u8>::new();
-        while self.file[self.pointer] != 0 {
-            let c = self.file[self.pointer];
-            self.pointer += 1;
+        while self.peek() != 0 {
+            let c = self.get();
             if c == b'\\' {
-                bytes.push(self.file[self.pointer]);
-                self.pointer += 1;
+                bytes.push(self.get());
             } else {
                 bytes.push(c);
             }
         }
         self.pointer += 1;
-        let value = match str::from_utf8(&bytes) {
-            Ok(v) => v.to_string(),
-            Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
-        };
+        let value = String::from_utf8_lossy(&bytes).to_string();       
         value
     }
 
@@ -113,16 +108,12 @@ impl ByteReader {
         }
 
         let mut bytes = Vec::<u8>::new();
-        while self.file[self.pointer] != 0 {
-            bytes.push(self.file[self.pointer]);
-            self.pointer += 1;
+        while self.peek() != 0 {
+            bytes.push(self.get());
         }
         self.pointer += 1;
 
-        let value = match str::from_utf8(&bytes) {
-            Ok(v) => v.to_string(),
-            Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
-        };
+        let value = String::from_utf8_lossy(&bytes).to_string();
 
         self.string_ref_container.insert(id, value.clone());
         value
@@ -163,10 +154,118 @@ impl ByteReader {
         u32::from_be_bytes(raw_bytes)
     }
 
+    pub fn read_gb_word(&mut self) -> u32{
+        let mut shift_distance: u32 = 0;
+        let mut res: u32 = 0;
+        while self.pointer < self.file.len() {
+            if shift_distance >= 32 {
+                panic!("input number is too large");
+            }
+
+            let byte: u32 = self.get() as u32;
+            res = res | ((byte & 0x7f) << shift_distance);
+            shift_distance = shift_distance + 7;
+            if (byte &  0x80) == 0 {
+                break;
+            } 
+        }
+
+        return res;
+    }
+
+    pub fn read_gb_string(&mut self) -> String {
+        self.read_string()
+    }
+
+    pub fn read_gb_string_ref(&mut self) -> String {
+        let id = self.read_gb_word();
+        if self.string_ref_container.contains_key(&id) {
+            return self.string_ref_container.get(&id).unwrap().clone();
+        }
+        let value = self.read_gb_string();
+
+        self.string_ref_container.insert(id, value.clone());
+        value
+    }
+
+
     pub fn read_file(path: &str) -> Self {
         trace!("Reading goto file: {}", path);
         let byte_content = fs::read(path).expect("Could not read file");
         ByteReader::from(byte_content)
     }
+
+    pub fn read_gb_reference(&mut self) -> Irept {
+        let id = self.read_gb_word();
+        if self.irep_container.contains_key(&id) {
+            return self.irep_container.get(&id).unwrap().clone();
+        }
+
+        let irep_id = self.read_gb_string_ref();
+        let mut irep_sub: Vec<Irept> = Vec::new();
+        let mut named_sub: HashMap<String, Irept> = HashMap::new();
+        let mut comments_sub: HashMap<String, Irept> = HashMap::new();
+
+        // Sub-expression
+        while self.peek() == b'S' {
+            self.pointer += 1;
+            let sub = self.read_gb_reference();
+            irep_sub.push(sub);
+        }
+
+        // Named sub
+        while self.peek() == b'N' {
+            self.pointer += 1;
+            let named_id = self.read_gb_string_ref();
+            // TODO: assert named_id[0] != '#'
+            named_sub.insert(named_id, self.read_gb_reference());
+        }
+
+        // Comment?
+        while self.peek() == b'C' {
+            self.pointer += 1;
+            let named_id = self.read_gb_string_ref();
+            // TODO: assert named_id[0] == '#'
+            comments_sub.insert(named_id, self.read_gb_reference());
+        }
+
+        let end_value = self.get();
+        if end_value != 0 {
+            panic!("Irep not terminated. Got {}", end_value);
+        }
+
+        let result = Irept {
+            id: irep_id,
+            subt: irep_sub,
+            named_subt: named_sub,
+            comments: comments_sub,
+        };
+
+        self.irep_container.insert(id, result.clone());
+        debug!("{}", result);
+        result
+    }
+
+    pub fn check_gb_header(&mut self) -> bool {
+        trace!("Checking header");
+        assert!(self.file.len() >= 4);
+        let header = vec![self.file[0], self.file[1], self.file[2],self.file[3]];
+        let gbf = vec![0x7f, b'G', b'B', b'F'];
+        if header != gbf {
+            error!("Invalid header");
+            error!("Expected: {}-{}-{}", gbf[0], gbf[1], gbf[2]);
+            error!("Found:    {}-{}-{}", header[0], header[1], header[2]);
+            return false;
+        }
+        self.pointer = 4;
+        true
+    }
+
+    pub fn check_gb_version(&mut self) -> bool {
+        trace!("Checking version");        
+        self.read_gb_word() == 6
+        
+    }
+    
 }
 

@@ -12,6 +12,7 @@ pub use bytewriter::ByteWriter;
 pub mod sql;
 
 pub mod esbmc;
+pub mod cbmc;
 fn init() {
     let env = Env::default()
         .filter_or("MY_LOG_LEVEL", "trace")

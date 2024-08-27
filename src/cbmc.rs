@@ -38,7 +38,7 @@ impl Default for CBMCSymbol {
 pub struct CBMCParser {
     pub reader: ByteReader,
     pub symbols_irep: Vec<CBMCSymbol>,
-    pub functions_irep: Vec<(String, Vec<Irept>)>,
+    pub functions_irep: Vec<(String, Irept)>,
 }
 
 pub fn process_gb_file(path: &str) -> CBMCParser {
@@ -83,28 +83,46 @@ pub fn process_gb_file(path: &str) -> CBMCParser {
     let number_of_functions = result.reader.read_gb_word();
     debug!("Got {} functions", number_of_functions);
     for _ in 0..number_of_functions {
+        let mut foo_instr = Irept::from("goto-program");        
         let foo_name = result.reader.read_gb_string();        
-        let foo_count = result.reader.read_gb_word();
-        debug!("Got {} function with {} instr", foo_name, foo_count);
-        
-        for _ in 0..foo_count {
-            let _code = result.reader.read_gb_reference();
-            let _source_location = result.reader.read_gb_reference();
-            let _instruction_type = result.reader.read_gb_word();
-            let _guard = result.reader.read_gb_reference();
-            let _target_number = result.reader.read_gb_word();
 
-            let _t_count = result.reader.read_gb_word();
-            for _ in 0.._t_count {
-                let _target = result.reader.read_gb_word();
+        let foo_count = result.reader.read_gb_word();        
+        for _ in 0..foo_count {
+            let mut instr = Irept::default();
+
+            instr.named_subt.insert("code".to_string(), result.reader.read_gb_reference());
+            instr.named_subt.insert("location".to_string(), result.reader.read_gb_reference());
+            instr.named_subt.insert("typeid".to_string(), result.reader.read_gb_reference());
+            instr.named_subt.insert("guard".to_string(), result.reader.read_gb_reference());
+
+            let _target_number = result.reader.read_gb_word(); // TODO: not sure how to handle this one
+
+            // Add targets
+            let t_count = result.reader.read_gb_word();
+            let mut t_ireps = Irept::default();
+            for _ in 0..t_count {
+                let target = Irept::from(result.reader.read_gb_word().to_string());
+                t_ireps.subt.push(target);
             }
-            let _l_count = result.reader.read_gb_word();
-            for _ in 0.._l_count {
-                let _label = result.reader.read_gb_string_ref();
+            if t_ireps.subt.len() > 0 {
+                instr.named_subt.insert("targets".to_string(), t_ireps);
             }
+
+            // Add labels
+            let l_count = result.reader.read_gb_word();
+            let mut l_ireps = Irept::default();
+            for _ in 0..l_count {
+                let label = result.reader.read_gb_string_ref();
+                l_ireps.subt.push(Irept::from(label));
+            }
+            if l_ireps.subt.len() > 0 {
+                instr.named_subt.insert("labels".to_string(), l_ireps);
+            }
+
+            foo_instr.subt.push(instr);
         }
-        //let foo = (result.reader.read_string(), result.reader.read_reference());
-        //result.functions_irep.push(foo.clone());
+        let foo = (foo_name, foo_instr);
+        result.functions_irep.push(foo.clone());
     }
 
     result

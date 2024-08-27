@@ -30,13 +30,12 @@ Also, some are the same with different names, e.g.: `__CPROVER__start = __ESBMC_
 ### CBMC
 
 ```
+_Bool __ESBMC_is_allocated[&symbol] __infinity
+_Bool __ESBMC_is_free[&symbol] __infinity
+size_t __ESBMC_allocated_size[&symbol] __infinity
+
+
 __CPROVER__start
-__CPROVER_architecture_NULL_is_zero
-__CPROVER_architecture_arch
-__CPROVER_architecture_endianness
-__CPROVER_architecture_alignment
-__CPROVER_architecture_wchar_t_is_unsigned
-__CPROVER_architecture_char_is_unsigned
 __CPROVER_initialize
 __CPROVER_max_malloc_size
 __CPROVER_size_t
@@ -49,15 +48,23 @@ __CPROVER_object_from
 __CPROVER_memory
 __CPROVER_constant_infinity_uint
 __CPROVER_assignable
-__CPROVER_architecture_memory_operand_size
+__CPROVER_freeable
+__CPROVER_is_freeable
+__CPROVER_was_freed
+
+
 __CPROVER_rounding_mode
+__CPROVER_architecture_memory_operand_size
 __CPROVER_architecture_os
 __CPROVER_architecture_long_int_width
-__CPROVER_freeable
 __CPROVER_architecture_int_width
-__CPROVER_is_freeable
 __CPROVER_architecture_word_size
-__CPROVER_was_freed
+__CPROVER_architecture_NULL_is_zero
+__CPROVER_architecture_arch
+__CPROVER_architecture_endianness
+__CPROVER_architecture_alignment
+__CPROVER_architecture_wchar_t_is_unsigned
+__CPROVER_architecture_char_is_unsigned
 __CPROVER_architecture_bool_width
 __CPROVER_architecture_char_width
 __CPROVER_architecture_short_int_width

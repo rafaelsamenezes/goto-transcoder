@@ -175,5 +175,9 @@ fn test_cbmc_file() {
     }
 
     std::fs::remove_file("test_cbmc.sqlite3").ok();
-    SqlWriter::write_to_file(irep_symbols, Vec::new(), "test_cbmc.sqlite3");
+    SqlWriter::write_to_file(irep_symbols.clone(), result.functions_irep.clone(), "test_cbmc.sqlite3");
+        std::fs::remove_file("test_cbmc.goto").ok();
+    ByteWriter::write_to_file(irep_symbols, result.functions_irep, "test_cbmc.goto");
+    process_file("test_cbmc.goto").unwrap();
+    
 }

@@ -7,7 +7,6 @@ pub struct Irept {
     pub comments: HashMap<String, Irept>,
 }
 
-
 impl std::hash::Hash for Irept {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.id.hash(state);
@@ -59,5 +58,30 @@ impl From<&String> for Irept {
         let mut res = Irept::default();
         res.id = data.clone();
         res
+    }
+}
+
+impl From<String> for Irept {
+    fn from(data: String) -> Self
+    {
+        let mut res = Irept::default();
+        res.id = data;
+        res
+    }
+}
+
+impl From<&str> for Irept {
+    fn from(data: &str) -> Self
+    {
+        let mut res = Irept::default();
+        res.id = data.to_string();
+        res
+    }
+}
+
+
+impl Irept {    
+    pub fn get_nil() -> Self {
+        Irept::from("nil")
     }
 }

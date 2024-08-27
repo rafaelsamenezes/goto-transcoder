@@ -2,8 +2,6 @@
 
 This project is still in early development stages.
 
-GOTO viewer was originally envisioned as tool to facilitate development, 
-
 ## Goal
 
 The goal here is to have a tool that facilitates visualizing and changing GOTO programs generated from ESBMC and CBMC by:
@@ -13,14 +11,90 @@ The goal here is to have a tool that facilitates visualizing and changing GOTO p
 - Writing into GBF to ESBMC/CBMC. Allowing to convert between both versions (note that this is not a compatibility layer, I expect a third-party app that will use the sqlite to adapt the program).
 - Parsing a db into ESBMC/CBMC GBF.
 
-## Formats
+## Format
 
-### GBF
+### Irep
 
-### DB
+Considering ESBMC and CBMC the most important data structure to consider is the Irep (intermediate representation?). It is a string based format that is used to contain all values from the program. As an example for the constant 42:
 
-The format is essentially a container of strings references. It is hard to manually change things, but it is pretty trivial for a relational DB.
+```
+Irep {
+  "id": "contant"
+  "named_subt":
+    "type": "unsigned_bv"
+    "value": "42"
+  "comment:"
+    "location:" "main.c function foo"
+}
+```
 
+For this project, the spec is:
+
+```
+Irep {
+  id: String,
+  sub: Vec<Irep>,
+  named_sub: HashMap<String, Irep>,
+  comment_sub: HashMap<String, Irep>
+}
+```
+
+It is worth notting that both CBMC and ESBMC will not use "String", they use a string cache which is only used by reference. This is also true for the binary formats.
+
+
+### Symbol
+
+A symbol is an Irep of the form:
+
+```
+Irep {
+ id = "symbol", // required
+ named_subt:
+   "type": <irep>, //required
+   "symvalue": <irep>, // optional
+   "location": <irep>, // optional
+   "name": <irep>, // required
+   "module": <irep>, // required
+   "base_name": <irep> // required
+   "mode": <irep> // required
+   // TODO: flags
+}
+```
+
+For example, an instruction `int a = 42;` in the function `foo` might generate:
+
+```
+Irep {
+ id = "symbol",
+ named_subt:
+   "type": Irept { id = "constant_bv", "named_subt"["width"]: "4" }
+   "symvalue": {id = "42" }, 
+   "location": {id = "foo line 1"},
+   "name": {id = "c:foo@a"}, 
+   "module": {id = "foo"}, 
+   "base_name": {id = "a"}
+   "mode": {id = "C" } 
+}
+```
+
+### Function
+
+A Function is of the pair <String, Irept>, where the first is the function name and the second is the set of instructions (in Irep):
+
+```
+Irep {
+  id = "goto-program", // required
+  subt: <instructions>
+}
+```
+
+
+
+
+
+### ESBMC GBF
+
+### CBMC GBF
 
 ## Intrinsic functions
 

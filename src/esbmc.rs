@@ -1,6 +1,10 @@
-use crate::{ByteWriter, ByteReader};
-pub use crate::Irept;
+use std::collections::HashMap;
 
+use log::debug;
+
+use crate::cbmc::CBMCSymbol;
+pub use crate::Irept;
+use crate::{ByteReader, ByteWriter};
 
 #[derive(Clone, Debug)]
 pub struct ESBMCParser {
@@ -64,55 +68,112 @@ pub fn process_file(path: &str) -> Result<ESBMCParser, ESBMCParserError> {
     return Ok(result);
 }
 
+// TODO: ESBMCSymbol and create ESBMCSymbol from CBMCSymbol
+impl From<CBMCSymbol> for Irept {
+    fn from(data: CBMCSymbol) -> Self {
+        let mut result = Irept::default();
+        result.id = String::from("symbol");
+        result.named_subt.insert("type".to_string(), data.stype);
+        result.named_subt.insert("symvalue".to_string(), data.value);
+        result
+            .named_subt
+            .insert("location".to_string(), data.location);
+        result
+            .named_subt
+            .insert("name".to_string(), Irept::from(&data.name));
+        result
+            .named_subt
+            .insert("module".to_string(), Irept::from(&data.name));
+        result
+            .named_subt
+            .insert("base_name".to_string(), Irept::from(&data.name));
+        result
+            .named_subt
+            .insert("mode".to_string(), Irept::from(&data.mode));
 
-// #[test]
-// fn test_file() {
-//     let env = env_logger::Env::default()
-//         .filter_or("MY_LOG_LEVEL", "trace")
-//         .write_style_or("MY_LOG_STYLE", "always");
+        // Fix flags
+        result
+    }
+}
 
-//     env_logger::init_from_env(env);
-//     let cargo_dir = match std::env::var("CARGO_MANIFEST_DIR") {
-//         Ok(v) => v,
-//         Err(err) => panic!("Could not open cargo folder. {}", err),
-//     };
-//     let test_path = std::path::Path::new(&cargo_dir).join("resources/test/hello.goto");
-//     assert!(test_path.exists());
+#[test]
+fn test_file() {
+    let cargo_dir = match std::env::var("CARGO_MANIFEST_DIR") {
+        Ok(v) => v,
+        Err(err) => panic!("Could not open cargo folder. {}", err),
+    };
+    let test_path = std::path::Path::new(&cargo_dir).join("resources/test/hello.goto");
+    assert!(test_path.exists());
 
-//     let result = process_file(test_path.to_str().unwrap()).unwrap();    
-//     ByteWriter::write_to_file(result.symbols_irep, result.functions_irep, "test.goto");
-// }
+    let result = process_file(test_path.to_str().unwrap()).unwrap();
 
-// use crate::sql::SqlWriter;
-// #[test]
-// fn test_write_sql_file() {
-//     let cargo_dir = match std::env::var("CARGO_MANIFEST_DIR") {
-//         Ok(v) => v,
-//         Err(err) => panic!("Could not open cargo folder. {}", err),
-//     };
+    std::fs::remove_file("test.goto").ok();
+    ByteWriter::write_to_file(result.symbols_irep, result.functions_irep, "test.goto");
+}
+
+use crate::sql::SqlWriter;
+#[test]
+fn test_write_sql_file() {
+    let cargo_dir = match std::env::var("CARGO_MANIFEST_DIR") {
+        Ok(v) => v,
+        Err(err) => panic!("Could not open cargo folder. {}", err),
+    };
+
+    let test_path = std::path::Path::new(&cargo_dir).join("resources/test/hello.goto");
+    assert!(test_path.exists());
+
+    let result = process_file(test_path.to_str().unwrap()).unwrap();
+    std::fs::remove_file("test.sqlite3").ok();
+    SqlWriter::write_to_file(result.symbols_irep, result.functions_irep, "test.sqlite3");
+}
+
+use crate::sql::SqlReader;
+#[test]
+fn test_read_sql_file() {
+    let cargo_dir = match std::env::var("CARGO_MANIFEST_DIR") {
+        Ok(v) => v,
+        Err(err) => panic!("Could not open cargo folder. {}", err),
+    };
+
+    let test_path = std::path::Path::new(&cargo_dir).join("resources/test/hello.sqlite3");
+    assert!(test_path.exists());
+
+    let reader = SqlReader::open(test_path.to_str().unwrap());
+
+    let symbols = reader.get_symbols();
+    let functions = reader.get_functions();
+
+    std::fs::remove_file("sqlite3_test.goto").ok();
+    ByteWriter::write_to_file(symbols, functions, "sqlite3_test.goto");
+}
+
+#[test]
+fn test_cbmc_file() {
+    let cargo_dir = match std::env::var("CARGO_MANIFEST_DIR") {
+        Ok(v) => v,
+        Err(err) => panic!("Could not open cargo folder. {}", err),
+    };
+    let test_path = std::path::Path::new(&cargo_dir).join("resources/test/hello-gb.goto");
+    assert!(test_path.exists());
+
+    let result = crate::cbmc::process_gb_file(test_path.to_str().unwrap());
     
-//     let test_path = std::path::Path::new(&cargo_dir).join("resources/test/hello.goto");
-//     assert!(test_path.exists());
-
-//     let result = process_file(test_path.to_str().unwrap()).unwrap();    
-//     SqlWriter::write_to_file(result.symbols_irep, result.functions_irep, "test.sqlite3");
-// }
-
-// use crate::sql::SqlReader;
-// #[test]
-// fn test_read_sql_file() {
-//     let cargo_dir = match std::env::var("CARGO_MANIFEST_DIR") {
-//         Ok(v) => v,
-//         Err(err) => panic!("Could not open cargo folder. {}", err),
-//      };
     
-//     let test_path = std::path::Path::new(&cargo_dir).join("resources/test/hello.sqlite3");
-//     assert!(test_path.exists());
+    let mut irep_symbols: Vec<Irept> = Vec::new();
+    for symbol in result.symbols_irep {
+        let irep_symbol = Irept::from(symbol.clone());
+        irep_symbols.push(irep_symbol);
+    }
 
-//     let reader = SqlReader::open(test_path.to_str().unwrap());
+    assert!(irep_symbols.len() > 0);
 
-//     let symbols = reader.get_symbols();
-//     let functions = reader.get_functions();
-    
-//     ByteWriter::write_to_file(symbols, functions, "sqlite3_test.goto");
-// }
+    for irep in &irep_symbols {
+        if irep.id != String::from("symbol") {
+            panic!("Invalid id {}", irep.id);
+        }
+        debug!("Test {}", irep.id);
+    }
+
+    std::fs::remove_file("test_cbmc.sqlite3").ok();
+    SqlWriter::write_to_file(irep_symbols, Vec::new(), "test_cbmc.sqlite3");
+}

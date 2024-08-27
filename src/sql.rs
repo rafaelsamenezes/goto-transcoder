@@ -1,3 +1,4 @@
+use log::debug;
 use rusqlite::Connection;
 
 use std::collections::HashMap;
@@ -52,7 +53,8 @@ impl SqlWriter {
 
         let mut counter = 0;
         for irep in symbols {
-            let id = writer.write_reference(&irep);
+            debug!("Writing symbol: {}", irep.id);
+            let id = writer.write_reference(&irep);            
             // The ordering might be important!
             writer
                 .connection

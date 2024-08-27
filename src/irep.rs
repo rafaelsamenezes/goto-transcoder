@@ -7,6 +7,7 @@ pub struct Irept {
     pub comments: HashMap<String, Irept>,
 }
 
+
 impl std::hash::Hash for Irept {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.id.hash(state);
@@ -48,5 +49,15 @@ impl Default for Irept {
             named_subt: HashMap::new(),
             comments: HashMap::new(),
         }
+    }
+}
+
+
+impl From<&String> for Irept {
+    fn from(data: &String) -> Self
+    {
+        let mut res = Irept::default();
+        res.id = data.clone();
+        res
     }
 }

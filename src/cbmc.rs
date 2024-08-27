@@ -4,21 +4,21 @@ use log::{error,trace,debug};
 
 
 #[derive(Clone, Debug)]
-pub struct Symbol {
-    stype: Irept,
-    value: Irept,
-    location: Irept,
-    name: String,
-    module: String,
-    base_name: String,
-    mode:  String,
-    pretty_name: String,
-    flags: u32    
+pub struct CBMCSymbol {
+    pub stype: Irept,
+    pub value: Irept,
+    pub location: Irept,
+    pub name: String,
+    pub module: String,
+    pub base_name: String,
+    pub mode:  String,
+    pub pretty_name: String,
+    pub flags: u32    
 }
 
-impl Default for Symbol {
+impl Default for CBMCSymbol {
     fn default() -> Self {
-        Symbol {
+        CBMCSymbol {
             stype: Irept::default(),
             value: Irept::default(),
             location: Irept::default(),
@@ -37,11 +37,11 @@ impl Default for Symbol {
 #[derive(Clone, Debug)]
 pub struct CBMCParser {
     pub reader: ByteReader,
-    pub symbols_irep: Vec<Symbol>,
+    pub symbols_irep: Vec<CBMCSymbol>,
     pub functions_irep: Vec<(String, Vec<Irept>)>,
 }
 
-pub fn process_gb_file(path: &str)  {
+pub fn process_gb_file(path: &str) -> CBMCParser {
     let mut result = CBMCParser {
         reader: ByteReader::read_file(path),
         functions_irep: Vec::new(),
@@ -61,7 +61,7 @@ pub fn process_gb_file(path: &str)  {
     debug!("Got {} symbols", number_of_symbols);
     
     for _ in 0..number_of_symbols {
-        let mut sym = Symbol::default();
+        let mut sym = CBMCSymbol::default();
         sym.stype = result.reader.read_gb_reference();
         sym.value = result.reader.read_gb_reference();
         sym.location = result.reader.read_gb_reference();
@@ -74,6 +74,8 @@ pub fn process_gb_file(path: &str)  {
 
         result.reader.read_gb_word();
         sym.flags = result.reader.read_gb_word();
+        debug!("Symbol name {}", sym.name);
+        result.symbols_irep.push(sym);
     }
     
 
@@ -93,7 +95,6 @@ pub fn process_gb_file(path: &str)  {
             let _target_number = result.reader.read_gb_word();
 
             let _t_count = result.reader.read_gb_word();
-            debug!("Got {} here", _t_count);
             for _ in 0.._t_count {
                 let _target = result.reader.read_gb_word();
             }
@@ -106,7 +107,7 @@ pub fn process_gb_file(path: &str)  {
         //result.functions_irep.push(foo.clone());
     }
 
-    // return Ok(result);
+    result
 }
 
 #[test]

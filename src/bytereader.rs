@@ -71,7 +71,6 @@ impl ByteReader {
         };
 
         self.irep_container.insert(id, result.clone());
-        debug!("{}", result);
         result
     }
 
@@ -242,7 +241,6 @@ impl ByteReader {
         };
 
         self.irep_container.insert(id, result.clone());
-        debug!("{}", result);
         result
     }
 

@@ -19,7 +19,7 @@ Considering ESBMC and CBMC the most important data structure to consider is the 
 
 ```
 Irep {
-  "id": "contant"
+  "id": "constant"
   "named_subt":
     "type": "unsigned_bv"
     "value": "42"
@@ -57,7 +57,7 @@ Irep {
    "module": <irep>, // required
    "base_name": <irep> // required
    "mode": <irep> // required
-   // TODO: flags
+   // TODO: flags // required
 }
 ```
 
@@ -84,7 +84,7 @@ A Function is of the pair <String, Irept>, where the first is the function name 
 ```
 Irep {
   id = "goto-program", // required
-  subt: <instructions>
+  subt: <instructions> // optional
 }
 ```
 

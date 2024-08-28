@@ -23,6 +23,8 @@ The goal here is to have a tool that facilitates visualizing and changing GOTO p
 
 ## Format
 
+A full GOTO program consists in a set of Symbols and a set of Functions. 
+
 ### Irep
 
 Considering ESBMC and CBMC the most important data structure to consider is the Irep (intermediate representation?). It is a string based format that is used to contain all values from the program. As an example for the constant 42:

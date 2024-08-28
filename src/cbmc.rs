@@ -1,7 +1,6 @@
-use crate::{ByteWriter, ByteReader};
 pub use crate::Irept;
-use log::{error,trace,debug};
-
+use crate::{ByteReader, ByteWriter};
+use log::{debug, error, trace};
 
 #[derive(Clone, Debug)]
 pub struct CBMCSymbol {
@@ -11,9 +10,9 @@ pub struct CBMCSymbol {
     pub name: String,
     pub module: String,
     pub base_name: String,
-    pub mode:  String,
+    pub mode: String,
     pub pretty_name: String,
-    pub flags: u32    
+    pub flags: u32,
 }
 
 impl Default for CBMCSymbol {
@@ -27,81 +26,116 @@ impl Default for CBMCSymbol {
             base_name: String::default(),
             mode: String::default(),
             pretty_name: String::default(),
-            flags: 0
+            flags: 0,
         }
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct CBMCFunction {
+    pub name: String,
+    pub instructions: Vec<Irept>
+}
+
+
+impl From<CBMCSymbol> for Irept {
+    fn from(data: CBMCSymbol) -> Self {
+        let mut result = Irept::default();
+        result.id = String::from("symbol");
+        result.named_subt.insert("type".to_string(), data.stype);
+        result.named_subt.insert("symvalue".to_string(), data.value);
+        result
+            .named_subt
+            .insert("location".to_string(), data.location);
+        result
+            .named_subt
+            .insert("name".to_string(), Irept::from(&data.name));
+        result
+            .named_subt
+            .insert("module".to_string(), Irept::from(&data.name));
+        result
+            .named_subt
+            .insert("base_name".to_string(), Irept::from(&data.name));
+        result
+            .named_subt
+            .insert("mode".to_string(), Irept::from(&data.mode));
+
+        // Fix flags
+        result
+    }
+}
 
 
 #[derive(Clone, Debug)]
 pub struct CBMCParser {
     pub reader: ByteReader,
-    pub symbols_irep: Vec<CBMCSymbol>,
+    pub symbols_irep: Vec<Irept>,
     pub functions_irep: Vec<(String, Irept)>,
 }
 
-pub fn process_gb_file(path: &str) -> CBMCParser {
+pub fn process_cbmc_file(path: &str) -> CBMCParser {
     let mut result = CBMCParser {
         reader: ByteReader::read_file(path),
         functions_irep: Vec::new(),
         symbols_irep: Vec::new(),
     };
 
-    if !result.reader.check_gb_header() {
-        panic!("Invalid header");
-    }
-
-    if !result.reader.check_gb_version() {
-        panic!("Invalid version");
-    }
+    result.reader.check_cbmc_header().unwrap();
+    result.reader.check_cbmc_version().unwrap();
 
     // Symbol table
-    let number_of_symbols = result.reader.read_gb_word();
+    let number_of_symbols = result.reader.read_cbmc_word();
     debug!("Got {} symbols", number_of_symbols);
-    
+
     for _ in 0..number_of_symbols {
         let mut sym = CBMCSymbol::default();
-        sym.stype = result.reader.read_gb_reference();
-        sym.value = result.reader.read_gb_reference();
-        sym.location = result.reader.read_gb_reference();
+        sym.stype = result.reader.read_cbmc_reference();
+        sym.value = result.reader.read_cbmc_reference();
+        sym.location = result.reader.read_cbmc_reference();
 
-        sym.name = result.reader.read_gb_string_ref();
-        sym.module = result.reader.read_gb_string_ref();
-        sym.mode = result.reader.read_gb_string_ref();
-        sym.base_name = result.reader.read_gb_string_ref();
-        sym.pretty_name = result.reader.read_gb_string_ref();
+        sym.name = result.reader.read_cbmc_string_ref();
+        sym.module = result.reader.read_cbmc_string_ref();
+        sym.mode = result.reader.read_cbmc_string_ref();
+        sym.base_name = result.reader.read_cbmc_string_ref();
+        sym.pretty_name = result.reader.read_cbmc_string_ref();
 
-        result.reader.read_gb_word();
-        sym.flags = result.reader.read_gb_word();
+        result.reader.read_cbmc_word();
+        sym.flags = result.reader.read_cbmc_word();
         debug!("Symbol name {}", sym.name);
-        result.symbols_irep.push(sym);
+        result.symbols_irep.push(Irept::from(sym));
     }
-    
 
     // Functions
-    let number_of_functions = result.reader.read_gb_word();
+    let number_of_functions = result.reader.read_cbmc_word();
     debug!("Got {} functions", number_of_functions);
     for _ in 0..number_of_functions {
-        let mut foo_instr = Irept::from("goto-program");        
-        let foo_name = result.reader.read_gb_string();        
+        let mut foo_instr = Irept::from("goto-program");
+        let foo_name = result.reader.read_gb_string();
 
-        let foo_count = result.reader.read_gb_word();        
+        let foo_count = result.reader.read_cbmc_word();
         for _ in 0..foo_count {
             let mut instr = Irept::default();
 
-            instr.named_subt.insert("code".to_string(), result.reader.read_gb_reference());
-            instr.named_subt.insert("location".to_string(), result.reader.read_gb_reference());
-            instr.named_subt.insert("typeid".to_string(), result.reader.read_gb_reference());
-            instr.named_subt.insert("guard".to_string(), result.reader.read_gb_reference());
+            instr
+                .named_subt
+                .insert("code".to_string(), result.reader.read_cbmc_reference());
+            instr
+                .named_subt
+                .insert("location".to_string(), result.reader.read_cbmc_reference());
+            instr
+                .named_subt
+                .insert("typeid".to_string(), result.reader.read_cbmc_reference());
+            instr
+                .named_subt
+                .insert("guard".to_string(), result.reader.read_cbmc_reference());
 
-            let _target_number = result.reader.read_gb_word(); // TODO: not sure how to handle this one
+            let _target_number = result.reader.read_cbmc_word(); // TODO: not sure how to handle this one
 
             // Add targets
-            let t_count = result.reader.read_gb_word();
+            let t_count = result.reader.read_cbmc_word();
             let mut t_ireps = Irept::default();
             for _ in 0..t_count {
-                let target = Irept::from(result.reader.read_gb_word().to_string());
+                let target = Irept::from(result.reader.read_cbmc_word().to_string());
                 t_ireps.subt.push(target);
             }
             if t_ireps.subt.len() > 0 {
@@ -109,10 +143,10 @@ pub fn process_gb_file(path: &str) -> CBMCParser {
             }
 
             // Add labels
-            let l_count = result.reader.read_gb_word();
+            let l_count = result.reader.read_cbmc_word();
             let mut l_ireps = Irept::default();
             for _ in 0..l_count {
-                let label = result.reader.read_gb_string_ref();
+                let label = result.reader.read_cbmc_string_ref();
                 l_ireps.subt.push(Irept::from(label));
             }
             if l_ireps.subt.len() > 0 {
@@ -142,5 +176,5 @@ fn test_file() {
     let test_path = std::path::Path::new(&cargo_dir).join("resources/test/hello-gb.goto");
     assert!(test_path.exists());
 
-    process_gb_file(test_path.to_str().unwrap());
+    process_cbmc_file(test_path.to_str().unwrap());
 }

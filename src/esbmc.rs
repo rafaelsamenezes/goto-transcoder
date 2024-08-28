@@ -13,7 +13,7 @@ pub struct ESBMCParser {
     pub functions_irep: Vec<(String, Irept)>,
 }
 
-pub fn process_file(path: &str) -> Result<ESBMCParser, String> {
+pub fn process_esbmc_file(path: &str) -> Result<ESBMCParser, String> {
     let mut result = ESBMCParser {
         reader: ByteReader::read_file(path),
         functions_irep: Vec::new(),
@@ -51,7 +51,7 @@ fn test_file() {
     let test_path = std::path::Path::new(&cargo_dir).join("resources/test/hello.goto");
     assert!(test_path.exists());
 
-    let result = process_file(test_path.to_str().unwrap()).unwrap();
+    let result = process_esbmc_file(test_path.to_str().unwrap()).unwrap();
 
     std::fs::remove_file("test.goto").ok();
     ByteWriter::write_to_file(result.symbols_irep, result.functions_irep, "test.goto");
@@ -68,7 +68,7 @@ fn test_write_sql_file() {
     let test_path = std::path::Path::new(&cargo_dir).join("resources/test/hello.goto");
     assert!(test_path.exists());
 
-    let result = process_file(test_path.to_str().unwrap()).unwrap();
+    let result = process_esbmc_file(test_path.to_str().unwrap()).unwrap();
     std::fs::remove_file("test.sqlite3").ok();
     SqlWriter::write_to_file(result.symbols_irep, result.functions_irep, "test.sqlite3");
 }

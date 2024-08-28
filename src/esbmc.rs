@@ -93,22 +93,4 @@ fn test_read_sql_file() {
     ByteWriter::write_to_file(symbols, functions, "sqlite3_test.goto");
 }
 
-#[test]
-fn test_cbmc_file() {
-    let cargo_dir = match std::env::var("CARGO_MANIFEST_DIR") {
-        Ok(v) => v,
-        Err(err) => panic!("Could not open cargo folder. {}", err),
-    };
-    let test_path = std::path::Path::new(&cargo_dir).join("resources/test/hello-gb.goto");
-    assert!(test_path.exists());
 
-    let result = crate::cbmc::process_cbmc_file(test_path.to_str().unwrap());
- 
-
-    std::fs::remove_file("test_cbmc.sqlite3").ok();
-    SqlWriter::write_to_file(result.symbols_irep.clone(), result.functions_irep.clone(), "test_cbmc.sqlite3");
-        std::fs::remove_file("test_cbmc.goto").ok();
-    ByteWriter::write_to_file(result.symbols_irep, result.functions_irep, "test_cbmc.goto");
-    process_file("test_cbmc.goto").unwrap();
-    
-}

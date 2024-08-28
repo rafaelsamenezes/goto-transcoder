@@ -2,7 +2,20 @@
 
 This project is still in early development stages.
 
+```mermaid
+flowchart TD
+    C[GOTO Transcoder]
+    A[ESBMC GBF] --> C[GOTO Transcoder]
+    S[SQLite] --> C
+    B[CBMC GBF] --> C
+    C --> A
+    C --> B
+    C --> S
+```
+
 ## Goal
+
+
 
 The goal here is to have a tool that facilitates visualizing and changing GOTO programs generated from ESBMC and CBMC by:
 

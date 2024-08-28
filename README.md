@@ -10,6 +10,10 @@ flowchart TD
     B[CBMC GBF] <--> C
 ```
 
+## Use
+
+- To convert from CBMC into ESBMC: `cargo run -- --mode 0 --input ./resources/test/hello-cbmc.goto --output hello.goto`.
+
 ## Goal
 
 

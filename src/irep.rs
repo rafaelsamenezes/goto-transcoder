@@ -7,6 +7,31 @@ pub struct Irept {
     pub comments: HashMap<String, Irept>,
 }
 
+impl Irept {
+    pub fn fix_expression(&mut self) {
+        println!("Fixing {}", self.id);
+
+        if self.id == "side_effect" {
+            self.id = "sideeffect".to_string();
+        }
+        
+        if self.id == "typecast" || self.id == "notequal" {
+            let mut operands = Irept::default();
+            operands.subt = self.subt.clone();
+            self.named_subt.insert("operands".to_string(), operands);
+            self.subt.clear();
+        }
+
+        for sub in &mut self.subt {
+            sub.fix_expression();
+        }
+
+        for (_,v) in &mut self.named_subt {
+            v.fix_expression();
+        }
+    }
+}
+
 impl std::hash::Hash for Irept {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.id.hash(state);
@@ -51,10 +76,8 @@ impl Default for Irept {
     }
 }
 
-
 impl From<&String> for Irept {
-    fn from(data: &String) -> Self
-    {
+    fn from(data: &String) -> Self {
         let mut res = Irept::default();
         res.id = data.clone();
         res
@@ -62,8 +85,7 @@ impl From<&String> for Irept {
 }
 
 impl From<String> for Irept {
-    fn from(data: String) -> Self
-    {
+    fn from(data: String) -> Self {
         let mut res = Irept::default();
         res.id = data;
         res
@@ -71,16 +93,14 @@ impl From<String> for Irept {
 }
 
 impl From<&str> for Irept {
-    fn from(data: &str) -> Self
-    {
+    fn from(data: &str) -> Self {
         let mut res = Irept::default();
         res.id = data.to_string();
         res
     }
 }
 
-
-impl Irept {    
+impl Irept {
     pub fn get_nil() -> Self {
         Irept::from("nil")
     }

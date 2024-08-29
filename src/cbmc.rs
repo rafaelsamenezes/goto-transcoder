@@ -84,7 +84,11 @@ pub struct CBMCParser {
     pub functions_irep: Vec<(String, Irept)>,
 }
 
+
+
 impl From<CBMCInstruction> for Irept {
+
+    
     fn from(data: CBMCInstruction) -> Self {
         let mut result = Irept::default();
 
@@ -94,6 +98,7 @@ impl From<CBMCInstruction> for Irept {
         operands.subt = code.subt.clone();
         code.subt.clear();
         code.named_subt.insert("operands".to_string(), operands);
+
         result.named_subt.insert("code".to_string(), code);
 
         result
@@ -126,6 +131,7 @@ impl From<CBMCInstruction> for Irept {
             .named_subt
             .insert("function".to_string(), data.function);
 
+        result.fix_expression();
         result
     }
 }

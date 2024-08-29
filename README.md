@@ -1,4 +1,4 @@
-# GOTO Viewer
+# GOTO Transcoder
 
 This project is still in early development stages.
 
@@ -55,7 +55,7 @@ Irep {
 }
 ```
 
-It is worth notting that both CBMC and ESBMC will not use "String", they use a string cache which is only used by reference. This is also true for the binary formats.
+Neither CBMC not ESBMC will use a "String" directly, they use a string cache which is only used by reference. This is also true for the binary formats.
 
 
 ### Symbol

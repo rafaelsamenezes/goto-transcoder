@@ -93,9 +93,9 @@ impl From<CBMCInstruction> for Irept {
         let mut operands = Irept::default();
         operands.subt = code.subt.clone();
         code.subt.clear();
-        code.named_subt.insert("operands".to_string(), operands);        
+        code.named_subt.insert("operands".to_string(), operands);
         result.named_subt.insert("code".to_string(), code);
-        
+
         result
             .named_subt
             .insert("location".to_string(), data.source_location);
@@ -135,9 +135,8 @@ impl From<CBMCFunction> for Irept {
         let mut result = Irept::from("goto-program");
         for instr in data.instructions {
             if instr.code.id == "nil" || instr.code.named_subt["statement"].id != "output" {
-                result.subt.push(Irept::from(instr));                
+                result.subt.push(Irept::from(instr));
             }
-            
         }
         result
     }
@@ -175,7 +174,7 @@ pub fn process_cbmc_file(path: &str) -> CBMCParser {
             symbasename = "__ESBMC_main".to_string();
         }
         debug!("Basename: {}", symbasename);
-        sym.base_name =  symbasename;
+        sym.base_name = symbasename;
         sym.mode = result.reader.read_cbmc_string_ref();
 
         sym.pretty_name = result.reader.read_cbmc_string_ref();
@@ -241,42 +240,47 @@ pub fn process_cbmc_file(path: &str) -> CBMCParser {
     result
 }
 
-use crate::sql::SqlWriter;
-#[test]
-fn test_cbmc_to_sqlite_file() {
-    let env = env_logger::Env::default()
-        .filter_or("MY_LOG_LEVEL", "trace")
-        .write_style_or("MY_LOG_STYLE", "always");
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    env_logger::init_from_env(env);
-    let cargo_dir = match std::env::var("CARGO_MANIFEST_DIR") {
-        Ok(v) => v,
-        Err(err) => panic!("Could not open cargo folder. {}", err),
-    };
-    let test_path = std::path::Path::new(&cargo_dir).join("resources/test/hello-gb.goto");
-    assert!(test_path.exists());
+    use crate::sql::SqlWriter;
+    #[test]
+    fn test_cbmc_to_sqlite_file() {
+        let env = env_logger::Env::default()
+            .filter_or("MY_LOG_LEVEL", "trace")
+            .write_style_or("MY_LOG_STYLE", "always");
 
-    let result = process_cbmc_file(test_path.to_str().unwrap());
+        env_logger::init_from_env(env);
+        let cargo_dir = match std::env::var("CARGO_MANIFEST_DIR") {
+            Ok(v) => v,
+            Err(err) => panic!("Could not open cargo folder. {}", err),
+        };
+        let test_path = std::path::Path::new(&cargo_dir).join("resources/test/hello-gb.goto");
+        assert!(test_path.exists());
 
-    std::fs::remove_file("test_cbmc.sqlite3").ok();
-    SqlWriter::write_to_file(
-        result.symbols_irep.clone(),
-        result.functions_irep.clone(),
-        "test_cbmc.sqlite3",
-    );
-}
+        let result = process_cbmc_file(test_path.to_str().unwrap());
 
-#[test]
-fn test_cbmc_to_esbmc_file() {
-    let cargo_dir = match std::env::var("CARGO_MANIFEST_DIR") {
-        Ok(v) => v,
-        Err(err) => panic!("Could not open cargo folder. {}", err),
-    };
-    let test_path = std::path::Path::new(&cargo_dir).join("resources/test/hello-gb.goto");
-    assert!(test_path.exists());
+        std::fs::remove_file("test_cbmc.sqlite3").ok();
+        SqlWriter::write_to_file(
+            result.symbols_irep.clone(),
+            result.functions_irep.clone(),
+            "test_cbmc.sqlite3",
+        );
+    }
 
-    let result = crate::cbmc::process_cbmc_file(test_path.to_str().unwrap());
+    #[test]
+    fn test_cbmc_to_esbmc_file() {
+        let cargo_dir = match std::env::var("CARGO_MANIFEST_DIR") {
+            Ok(v) => v,
+            Err(err) => panic!("Could not open cargo folder. {}", err),
+        };
+        let test_path = std::path::Path::new(&cargo_dir).join("resources/test/hello-gb.goto");
+        assert!(test_path.exists());
 
-    std::fs::remove_file("test_cbmc.goto").ok();
-    ByteWriter::write_to_file(result.symbols_irep, result.functions_irep, "test_cbmc.goto");
+        let result = crate::cbmc::process_cbmc_file(test_path.to_str().unwrap());
+
+        std::fs::remove_file("test_cbmc.goto").ok();
+        ByteWriter::write_to_file(result.symbols_irep, result.functions_irep, "test_cbmc.goto");
+    }
 }

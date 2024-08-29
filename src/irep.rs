@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::HashSet;
 #[derive(Clone, Debug)]
 pub struct Irept {
     pub id: String,
@@ -9,13 +10,19 @@ pub struct Irept {
 
 impl Irept {
     pub fn fix_expression(&mut self) {
-        println!("Fixing {}", self.id);
-
         if self.id == "side_effect" {
             self.id = "sideeffect".to_string();
-        }
-        
-        if self.id == "typecast" || self.id == "notequal" {
+        } 
+
+        let expressions: HashSet<String> = HashSet::from(
+            [
+                "member", "typecast", "notequal", "or", "mod", "not", "*", "/", "+", "-", "=", "<",
+                "lshr",
+            ]
+            .map(|x| x.to_string()),
+        );
+
+        if expressions.contains(&self.id) {
             let mut operands = Irept::default();
             operands.subt = self.subt.clone();
             self.named_subt.insert("operands".to_string(), operands);
@@ -26,7 +33,13 @@ impl Irept {
             sub.fix_expression();
         }
 
-        for (_,v) in &mut self.named_subt {
+        for (k, v) in &mut self.named_subt {
+
+            if k == "components" {
+                for sub in &mut v.subt {
+                    sub.id = "component".to_string();
+                }
+            }
             v.fix_expression();
         }
     }

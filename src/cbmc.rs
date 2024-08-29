@@ -43,18 +43,22 @@ impl From<CBMCSymbol> for Irept {
 
         result
             .named_subt
-            .insert("name".to_string(), Irept::from(&data.name));
-        result
-            .named_subt
             .insert("module".to_string(), Irept::from(&data.module));
-        result
-            .named_subt
-            .insert("base_name".to_string(), Irept::from(&data.base_name));
+
         result
             .named_subt
             .insert("mode".to_string(), Irept::from(&data.mode));
 
+         result
+            .named_subt
+                .insert("base_name".to_string(), Irept::from(&data.base_name));
+            
+            result
+                .named_subt
+                .insert("name".to_string(), Irept::from(&data.name));
+
         // Fix flags
+        result.fix_expression();
         result
     }
 }

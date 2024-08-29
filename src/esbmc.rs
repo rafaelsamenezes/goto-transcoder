@@ -55,8 +55,8 @@ mod tests {
 
         let result = process_esbmc_file(test_path.to_str().unwrap()).unwrap();
 
-        std::fs::remove_file("test.goto").ok();
-        ByteWriter::write_to_file(result.symbols_irep, result.functions_irep, "test.goto");
+        std::fs::remove_file("/tmp/test.goto").ok();
+        ByteWriter::write_to_file(result.symbols_irep, result.functions_irep, "/tmp/test.goto");
     }
 
     use crate::sql::SqlWriter;
@@ -71,8 +71,8 @@ mod tests {
         assert!(test_path.exists());
 
         let result = process_esbmc_file(test_path.to_str().unwrap()).unwrap();
-        std::fs::remove_file("test.sqlite3").ok();
-        SqlWriter::write_to_file(result.symbols_irep, result.functions_irep, "test.sqlite3");
+        std::fs::remove_file("/tmp/test.sqlite3").ok();
+        SqlWriter::write_to_file(result.symbols_irep, result.functions_irep, "/tmp/test.sqlite3");
     }
 
     use crate::sql::SqlReader;
@@ -91,7 +91,7 @@ mod tests {
         let symbols = reader.get_symbols();
         let functions = reader.get_functions();
 
-        std::fs::remove_file("sqlite3_test.goto").ok();
-        ByteWriter::write_to_file(symbols, functions, "sqlite3_test.goto");
+        std::fs::remove_file("/tmp/sqlite3_test.goto").ok();
+        ByteWriter::write_to_file(symbols, functions, "/tmp/sqlite3_test.goto");
     }
 }

@@ -200,7 +200,7 @@ pub fn process_cbmc_file(path: &str) -> CBMCParser {
 
         for _ in 0..result.reader.read_cbmc_word() {
             // # instructions
-            let mut code = result.reader.read_cbmc_reference();
+            let code = result.reader.read_cbmc_reference();
 
             let source_location = result.reader.read_cbmc_reference();
             let instr_type = result.reader.read_cbmc_word();
@@ -247,11 +247,6 @@ mod tests {
     use crate::sql::SqlWriter;
     #[test]
     fn test_cbmc_to_sqlite_file() {
-        let env = env_logger::Env::default()
-            .filter_or("MY_LOG_LEVEL", "trace")
-            .write_style_or("MY_LOG_STYLE", "always");
-
-        env_logger::init_from_env(env);
         let cargo_dir = match std::env::var("CARGO_MANIFEST_DIR") {
             Ok(v) => v,
             Err(err) => panic!("Could not open cargo folder. {}", err),
@@ -261,11 +256,11 @@ mod tests {
 
         let result = process_cbmc_file(test_path.to_str().unwrap());
 
-        std::fs::remove_file("test_cbmc.sqlite3").ok();
+        std::fs::remove_file("/tmp/test_cbmc.sqlite3").ok();
         SqlWriter::write_to_file(
             result.symbols_irep.clone(),
             result.functions_irep.clone(),
-            "test_cbmc.sqlite3",
+            "/tmp/test_cbmc.sqlite3",
         );
     }
 
@@ -280,7 +275,7 @@ mod tests {
 
         let result = crate::cbmc::process_cbmc_file(test_path.to_str().unwrap());
 
-        std::fs::remove_file("test_cbmc.goto").ok();
-        ByteWriter::write_to_file(result.symbols_irep, result.functions_irep, "test_cbmc.goto");
+        std::fs::remove_file("/tmp/test_cbmc.goto").ok();
+        ByteWriter::write_to_file(result.symbols_irep, result.functions_irep, "/tmp/test_cbmc.goto");
     }
 }

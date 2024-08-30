@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 pub use crate::Irept;
 use crate::{ByteReader, ByteWriter};
 use log::{debug, error, trace};
@@ -49,13 +51,23 @@ impl From<CBMCSymbol> for Irept {
             .named_subt
             .insert("mode".to_string(), Irept::from(&data.mode));
 
-         result
+        let name = match data.name.as_str() {
+            "__CPROVER__start" => "__ESBMC_main".to_string(),
+            _ => data.name.clone(),
+        };
+
+        let basename = match data.base_name.as_str() {
+            "__CPROVER__start" => "__ESBMC_main".to_string(),
+            _ => data.base_name.clone(),
+        };
+
+        result
             .named_subt
-                .insert("base_name".to_string(), Irept::from(&data.base_name));
-            
-            result
-                .named_subt
-                .insert("name".to_string(), Irept::from(&data.name));
+            .insert("base_name".to_string(), Irept::from(basename));
+
+        result
+            .named_subt
+            .insert("name".to_string(), Irept::from(name));
 
         // Fix flags
         result.fix_expression();
@@ -81,18 +93,7 @@ pub struct CBMCFunction {
     pub instructions: Vec<CBMCInstruction>,
 }
 
-#[derive(Clone, Debug)]
-pub struct CBMCParser {
-    pub reader: ByteReader,
-    pub symbols_irep: Vec<Irept>,
-    pub functions_irep: Vec<(String, Irept)>,
-}
-
-
-
 impl From<CBMCInstruction> for Irept {
-
-    
     fn from(data: CBMCInstruction) -> Self {
         let mut result = Irept::default();
 
@@ -152,11 +153,20 @@ impl From<CBMCFunction> for Irept {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct CBMCParser {
+    pub reader: ByteReader,
+    pub symbols_irep: Vec<Irept>,
+    pub functions_irep: Vec<(String, Irept)>,
+    pub struct_cache: HashMap<Irept, Irept>,
+}
+
 pub fn process_cbmc_file(path: &str) -> CBMCParser {
     let mut result = CBMCParser {
         reader: ByteReader::read_file(path),
         functions_irep: Vec::new(),
         symbols_irep: Vec::new(),
+        struct_cache: HashMap::new(),
     };
 
     result.reader.check_cbmc_header().unwrap();
@@ -172,26 +182,16 @@ pub fn process_cbmc_file(path: &str) -> CBMCParser {
         sym.value = result.reader.read_cbmc_reference();
         sym.location = result.reader.read_cbmc_reference();
 
-        let mut symname = result.reader.read_cbmc_string_ref();
-        if symname == "__CPROVER__start" {
-            symname = "__ESBMC_main".to_string();
-        }
-        sym.name = symname;
+        sym.name = result.reader.read_cbmc_string_ref();
         sym.module = result.reader.read_cbmc_string_ref();
 
-        let mut symbasename = result.reader.read_cbmc_string_ref();
-        if symbasename == "__CPROVER__start" {
-            symbasename = "__ESBMC_main".to_string();
-        }
-        debug!("Basename: {}", symbasename);
-        sym.base_name = symbasename;
+        sym.base_name = result.reader.read_cbmc_string_ref();
         sym.mode = result.reader.read_cbmc_string_ref();
 
         sym.pretty_name = result.reader.read_cbmc_string_ref();
 
         result.reader.read_cbmc_word();
         sym.flags = result.reader.read_cbmc_word();
-        debug!("Symbol name {}", sym.name);
         result.symbols_irep.push(Irept::from(sym));
     }
 
@@ -286,6 +286,10 @@ mod tests {
         let result = crate::cbmc::process_cbmc_file(test_path.to_str().unwrap());
 
         std::fs::remove_file("/tmp/test_cbmc.goto").ok();
-        ByteWriter::write_to_file(result.symbols_irep, result.functions_irep, "/tmp/test_cbmc.goto");
+        ByteWriter::write_to_file(
+            result.symbols_irep,
+            result.functions_irep,
+            "/tmp/test_cbmc.goto",
+        );
     }
 }

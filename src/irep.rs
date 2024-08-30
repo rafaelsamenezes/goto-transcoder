@@ -43,6 +43,7 @@ impl Irept {
             v.fix_expression();
         }
     }
+
 }
 
 impl std::hash::Hash for Irept {
@@ -74,7 +75,7 @@ impl Eq for Irept {}
 
 impl std::fmt::Display for Irept {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Irept: {}", self.id)
+        write!(f, "{}", self.id)
     }
 }
 

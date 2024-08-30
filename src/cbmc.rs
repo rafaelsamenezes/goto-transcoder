@@ -15,6 +15,7 @@ pub struct CBMCSymbol {
     pub mode: String,
     pub pretty_name: String,
     pub flags: u32,
+    pub is_type: bool
 }
 
 impl Default for CBMCSymbol {
@@ -29,6 +30,7 @@ impl Default for CBMCSymbol {
             mode: String::default(),
             pretty_name: String::default(),
             flags: 0,
+            is_type: false
         }
     }
 }
@@ -60,6 +62,15 @@ impl From<CBMCSymbol> for Irept {
             "__CPROVER__start" => "__ESBMC_main".to_string(),
             _ => data.base_name.clone(),
         };
+
+        if data.is_type {
+            result
+            .named_subt
+                .insert("is_type".to_string(), Irept::from("1"));
+        }
+
+
+
 
         result
             .named_subt
@@ -161,6 +172,37 @@ pub struct CBMCParser {
     pub struct_cache: HashMap<Irept, Irept>,
 }
 
+impl Irept {
+    pub fn fix_type(&mut self, cache: &HashMap<Irept, Irept>) {
+        if self.id != "struct_tag" {
+            for v in &mut self.subt {
+                v.fix_type(cache);
+            }
+
+            for (_,v) in &mut self.named_subt {
+                v.fix_type(cache);
+            }
+
+            for (_,v) in &mut self.comments {
+                v.fix_type(cache);
+            }
+            
+            return;
+        }
+      
+        if !self.named_subt.contains_key("identifier") {
+            return;
+        }
+
+
+        if !cache.contains_key(&self.named_subt["identifier"]) {
+            return;
+        }
+
+        *self = cache[&self.named_subt["identifier"]].clone();
+    }
+}
+
 pub fn process_cbmc_file(path: &str) -> CBMCParser {
     let mut result = CBMCParser {
         reader: ByteReader::read_file(path),
@@ -192,7 +234,41 @@ pub fn process_cbmc_file(path: &str) -> CBMCParser {
 
         result.reader.read_cbmc_word();
         sym.flags = result.reader.read_cbmc_word();
-        result.symbols_irep.push(Irept::from(sym));
+
+        sym.is_type = sym.flags & (1 << 15) != 0;
+        println!("{}", sym.stype.id);
+        if sym.is_type && sym.stype.id == "struct" {
+            // Type caching
+            for (k,v) in &sym.stype.named_subt {
+                println!("Key {}. Value {}", k, v.id);
+            }
+
+            let tagname = Irept::from(format!("tag-{}", sym.stype.named_subt["tag"]));
+            result.struct_cache.insert(tagname, sym.stype.clone());            
+        }
+
+        
+        // sym.is_weak = (flags &(1 << 16))!=0;
+        // sym.is_type = (flags &(1 << 15))!=0;
+        // sym.is_property = (flags &(1 << 14))!=0;
+        // sym.is_macro = (flags &(1 << 13))!=0;
+        // sym.is_exported = (flags &(1 << 12))!=0;
+        // // sym.is_input = (flags &(1 << 11))!=0;
+        // sym.is_output = (flags &(1 << 10))!=0;
+        // sym.is_state_var = (flags &(1 << 9))!=0;
+        // sym.is_parameter = (flags &(1 << 8))!=0;
+        // sym.is_auxiliary = (flags &(1 << 7))!=0;
+        // // sym.binding = (flags &(1 << 6))!=0;
+        // sym.is_lvalue = (flags &(1 << 5))!=0;
+        // sym.is_static_lifetime = (flags &(1 << 4))!=0;
+        // sym.is_thread_local = (flags &(1 << 3))!=0;
+        // sym.is_file_local = (flags &(1 << 2))!=0;
+        // sym.is_extern = (flags &(1 << 1))!=0;
+        // sym.is_volatile = (flags &1)!=0;
+
+        let mut symbol_irep = Irept::from(sym);
+        symbol_irep.fix_type(&result.struct_cache);
+        result.symbols_irep.push(symbol_irep);
     }
 
     // Functions
@@ -243,9 +319,12 @@ pub fn process_cbmc_file(path: &str) -> CBMCParser {
                 function: Irept::from(&function.name),
             })
         }
+        let function_name = function.name.clone();
+        let mut function_irep = Irept::from(function);
+        function_irep.fix_type(&result.struct_cache);
         result
             .functions_irep
-            .push((function.name.clone(), Irept::from(function)));
+            .push((function_name, function_irep));
     }
     result
 }

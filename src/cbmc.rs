@@ -196,7 +196,7 @@ impl Irept {
 
 
         if !cache.contains_key(&self.named_subt["identifier"]) {
-            return;
+            panic!("Cache miss {}", self);
         }
 
         *self = cache[&self.named_subt["identifier"]].clone();
@@ -236,17 +236,12 @@ pub fn process_cbmc_file(path: &str) -> CBMCParser {
         sym.flags = result.reader.read_cbmc_word();
 
         sym.is_type = sym.flags & (1 << 15) != 0;
-        println!("{}", sym.stype.id);
         if sym.is_type && sym.stype.id == "struct" {
             // Type caching
-            for (k,v) in &sym.stype.named_subt {
-                println!("Key {}. Value {}", k, v.id);
-            }
-
-            let tagname = Irept::from(format!("tag-{}", sym.stype.named_subt["tag"]));
-            result.struct_cache.insert(tagname, sym.stype.clone());            
+            sym.stype.named_subt.insert("tag".to_string(), Irept::from(&sym.base_name));
+            let tagname = Irept::from(format!("tag-{}", &sym.base_name));
+            result.struct_cache.insert(tagname, sym.stype.clone());
         }
-
         
         // sym.is_weak = (flags &(1 << 16))!=0;
         // sym.is_type = (flags &(1 << 15))!=0;

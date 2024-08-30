@@ -43,8 +43,34 @@ impl Irept {
             v.fix_expression();
         }
     }
-
 }
+
+use json::object;
+use json::JsonValue;
+impl From<&Irept> for JsonValue {
+
+
+    fn from(data: &Irept) -> Self {
+        let mut obj = object!{id: data.id.clone()};
+
+        let mut sub_vec: Vec<JsonValue> = Vec::new();
+        for sub in &data.subt {
+            sub_vec.push(JsonValue::from(sub));
+        }
+        obj["subt"] = JsonValue::from(sub_vec);
+
+        for (k,v) in &data.named_subt {
+            obj[k] = JsonValue::from(v);
+        }
+
+        for (k,v) in &data.comments {
+            obj[k] = JsonValue::from(v);
+        }
+        
+        obj
+    }
+}
+
 
 impl std::hash::Hash for Irept {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
@@ -75,7 +101,8 @@ impl Eq for Irept {}
 
 impl std::fmt::Display for Irept {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.id)
+        let as_json = JsonValue::from(self);
+        write!(f, "{}", json::stringify_pretty(as_json,4))
     }
 }
 

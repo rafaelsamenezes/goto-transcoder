@@ -172,7 +172,190 @@ pub struct CBMCParser {
     pub struct_cache: HashMap<Irept, Irept>,
 }
 
+
+
+#[derive(Clone, Debug)]
+enum Component {
+    Struct {components: Vec<Component>},
+    Unsigned {width: usize},
+    Signed {width: usize},
+    Void,
+    Pointer {to: Box<Component>}
+}
+
+#[derive(Clone, Debug)]
+struct Anon2Struct {
+    bytes: Vec<u8>,
+    counter: usize,
+    cache: HashMap<String, Component>
+}
+
+
+impl Anon2Struct {
+    fn parse_component(&mut self) -> Component {
+        println!("{}",String::from_utf8_lossy(&self.bytes[self.counter..self.counter+2]).to_string());
+        // let
+        assert!(self.counter + 3 <= self.bytes.len());
+        if &self.bytes[self.counter..self.counter+3] == "ST[".as_bytes() {
+            self.counter = self.counter + 3;
+            return self.parse_struct();
+        } else if &self.bytes[self.counter..self.counter+3] == "SYM".as_bytes() {
+            self.counter = self.counter + 3;
+            return self.parse_sym();
+        } else if &self.bytes[self.counter..self.counter+1] == "S".as_bytes() {
+            println!("parsing  ST");
+        } else if &self.bytes[self.counter..self.counter+1] == "U".as_bytes() {
+            self.counter = self.counter + 1;
+            return self.parse_unsigned();
+        } else if &self.bytes[self.counter..self.counter+1] == "V".as_bytes() {
+            self.counter = self.counter + 1;
+            println!("parsing void");
+            return Component::Void;
+        } else if &self.bytes[self.counter..self.counter+2] == "*{".as_bytes() {
+            self.counter = self.counter + 2;
+            return self.parse_pointer();
+        }
+        
+
+
+        panic!("Missing something?");
+    }
+
+    fn parse_pointer(&mut self) -> Component {
+        println!("parsing Pointer");
+        let component = self.parse_component();
+        assert!(&self.bytes[self.counter..self.counter+1] == "}".as_bytes());
+        self.counter = self.counter + 1;
+        Component::Pointer{to: Box::from(component)}
+        
+    }
+
+    fn parse_unsigned(&mut self) -> Component {
+        let mut id: Vec<u8> = Vec::new();
+        let _ = loop {
+            let char = &self.bytes[self.counter..self.counter+1];
+
+            self.counter = self.counter + 1;
+            if char == "'".as_bytes() {
+                self.counter = self.counter - 1;
+                break;
+            }
+            id.push(char[0]);
+        };
+
+        let identifier = String::from_utf8_lossy(&id).to_string();
+        let width: usize = identifier.as_str().parse().unwrap();        
+        Component::Unsigned{width}
+    }
+
+    fn parse_name(&mut self) -> String {
+        println!("parsing  Name");
+        self.counter = self.counter + 1;
+        let mut id: Vec<u8> = Vec::new();
+        let _ = loop {
+            let char = &self.bytes[self.counter..self.counter+1];
+
+            self.counter = self.counter + 1;
+            if char == "'".as_bytes() {
+                break;
+            }
+            id.push(char[0]);
+        };
+
+        String::from_utf8_lossy(&id).to_string()
+    }
+
+
+    fn parse_struct(&mut self) -> Component {
+        println!("parsing  ST");
+        let mut components: Vec<Component> = Vec::new();
+        let _ = loop {
+            let char = &self.bytes[self.counter..self.counter+1];
+            println!("Byte: {}", String::from_utf8_lossy(&char).to_string());
+            if char == "]".as_bytes() {
+                self.counter = self.counter + 1;
+                break;
+            } else if char == "|".as_bytes() {
+                self.counter = self.counter + 1;
+            }
+            ;
+
+            let component = self.parse_component();
+            assert!(&self.bytes[self.counter..self.counter+1] == "'".as_bytes());
+            components.push(component);
+            let name = self.parse_name();
+            println!("Name: {}", name);
+
+
+        };
+
+        Component::Struct{components}
+    }
+
+    fn parse_sym(&mut self) -> Component {
+        println!("parsing  SYM");
+
+        let mut id: Vec<u8> = Vec::new();
+        let result = loop {
+            let char = &self.bytes[self.counter..self.counter+1];
+
+            self.counter = self.counter + 1;
+            if char == "'".as_bytes() || char == "}".as_bytes() {
+                self.counter = self.counter - 1;
+                break false;
+            }
+            if char == "=".as_bytes() {
+                self.counter = self.counter + 1;
+                break true;
+            }
+            id.push(char[0]);
+        };
+
+        let identifier = String::from_utf8_lossy(&id).to_string();
+        if result {
+            let component = self.parse_component();
+            self.counter = self.counter + 1;
+            self.cache.insert(identifier, component.clone());
+            return component;
+        }
+
+        return self.cache[&identifier].clone();
+        
+    }
+}
+
+impl Component {   
+    
+    
+
+// impl From<&str> for Component {
+
+    
+}
+
 impl Irept {
+
+    pub fn expand_anon_struct(&mut self) {
+        if self.named_subt.contains_key("components") {
+            return;
+        }
+        println!("Irept: {}", self);
+
+        // ESBMC has no parser for this anon naming conventions.
+
+        let mut result = Irept::default();
+
+        let mut counter = 0;
+        let identifier = self.named_subt["identifier"].id.as_bytes();
+        
+        assert!(&identifier[0..10] == "tag-#anon#".as_bytes());
+        let mut parser = Anon2Struct {bytes: Vec::from(identifier), counter: 10, cache: HashMap::new()};
+        parser.parse_component();
+
+        panic!("error");
+        
+    }
+    
     pub fn fix_type(&mut self, cache: &HashMap<Irept, Irept>) {
         if self.id != "struct_tag" {
             for v in &mut self.subt {
@@ -196,7 +379,8 @@ impl Irept {
 
 
         if !cache.contains_key(&self.named_subt["identifier"]) {
-            panic!("Cache miss {}", self);
+            self.expand_anon_struct();
+            return;
         }
 
         *self = cache[&self.named_subt["identifier"]].clone();

@@ -229,6 +229,10 @@ impl ByteReader {
             }
         }
 
+        if self.pointer > self.file.len() {
+            panic!("Unexpected end of stream");
+        }
+
         return res;
     }
 

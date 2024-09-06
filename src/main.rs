@@ -180,11 +180,11 @@ mod tests {
     #[test]
     #[ignore]
     fn hello_world() {
-        run_test("hello_world.c", &["--goto-functions-only"], 6);
-        run_test("hello_world.c", &["--incremental-bmc"], 0);
-        run_test("hello_world_fail.c", &["--incremental-bmc"], 1);
-        run_test("hello_struct.c", &["--incremental-bmc"], 1);
-        run_test("hello_anon_struct.c", &["--incremental-bmc"], 1);
+         run_test("hello_world.c", &["--goto-functions-only"], 6);
+         run_test("hello_world.c", &["--incremental-bmc"], 0);
+         run_test("hello_world_fail.c", &["--incremental-bmc"], 1);
+         run_test("hello_struct.c", &["--incremental-bmc"], 1);
+         run_test("hello_anon_struct.c", &["--incremental-bmc"], 1);
     }
 
     #[test]

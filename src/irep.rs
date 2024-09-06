@@ -17,7 +17,7 @@ impl Irept {
         let expressions: HashSet<String> = HashSet::from(
             [
                 "member", "typecast", "notequal", "or", "mod", "not", "*", "/", "+", "-", "=", "<",
-                "lshr",
+                "lshr", "shl", "address_of", "index", "pointer_object", "array_of", "sideeffect", "dereference", "bitand"
             ]
             .map(|x| x.to_string()),
         );

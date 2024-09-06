@@ -191,6 +191,6 @@ mod tests {
     #[ignore]
     fn mk_mul() {
         run_goto_test("mul.goto", &["--goto-functions-only"], 6);
-        // run_goto_test("mul_contract.goto", &["--goto-functions-only"], 6);
+        run_goto_test("mul_contract.goto", &["--goto-functions-only"], 6);
     }
 }

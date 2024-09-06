@@ -176,12 +176,63 @@ pub struct CBMCParser {
 
 #[derive(Clone, Debug)]
 enum Component {
-    Struct {components: Vec<Component>},
+    Struct {components: Vec<(String,Component)>},
     Unsigned {width: usize},
     Signed {width: usize},
     Void,
     Pointer {to: Box<Component>}
 }
+
+
+fn from_struct(components: Vec<(String, Component)>) -> Irept {
+    let mut result = Irept::from("struct");
+    let mut subt: Irept = Irept::from("components");
+    for (name, component) in components {
+        let mut irep = Irept::from("component");
+        irep.named_subt.insert("name".to_string(), Irept::from(name.clone()));
+        irep.named_subt.insert("prettyname".to_string(), Irept::from(name));
+        irep.named_subt.insert("type".to_string(),  Irept::from(component));
+        subt.subt.push(irep);
+    }
+    result.named_subt.insert("components".to_string(), subt);
+    
+    result
+}
+
+fn from_unsigned(width: usize) -> Irept {
+    let mut result = Irept::from("unsignedbv");
+    result.named_subt.insert("width".to_string(), Irept::from(width.to_string()));
+    result
+}
+
+fn from_signed(width: usize) -> Irept {
+    let mut result = Irept::from("signedbv");
+    result.named_subt.insert("width".to_string(), Irept::from(width.to_string()));
+    result
+}
+
+fn from_pointer(to: Box<Component>) -> Irept {
+    let mut result = Irept::from("pointer");
+    result.named_subt.insert("subtype".to_string(), Irept::from(*to));
+    result
+}
+
+impl From<Component> for Irept {
+
+    
+    fn from(data: Component) -> Self {
+        match data  {
+            Component::Struct {components} =>  from_struct(components),
+            Component::Unsigned {width} => from_unsigned(width),
+            Component::Signed {width} => from_signed(width),
+            Component::Void  => Irept::from("empty"),
+            Component::Pointer { to }   => from_pointer(to)
+        }
+    }
+}
+
+
+
 
 #[derive(Clone, Debug)]
 struct Anon2Struct {
@@ -193,8 +244,6 @@ struct Anon2Struct {
 
 impl Anon2Struct {
     fn parse_component(&mut self) -> Component {
-        println!("{}",String::from_utf8_lossy(&self.bytes[self.counter..self.counter+2]).to_string());
-        // let
         assert!(self.counter + 3 <= self.bytes.len());
         if &self.bytes[self.counter..self.counter+3] == "ST[".as_bytes() {
             self.counter = self.counter + 3;
@@ -203,26 +252,20 @@ impl Anon2Struct {
             self.counter = self.counter + 3;
             return self.parse_sym();
         } else if &self.bytes[self.counter..self.counter+1] == "S".as_bytes() {
-            println!("parsing  ST");
         } else if &self.bytes[self.counter..self.counter+1] == "U".as_bytes() {
             self.counter = self.counter + 1;
             return self.parse_unsigned();
         } else if &self.bytes[self.counter..self.counter+1] == "V".as_bytes() {
-            self.counter = self.counter + 1;
-            println!("parsing void");
+            self.counter = self.counter + 1;         
             return Component::Void;
         } else if &self.bytes[self.counter..self.counter+2] == "*{".as_bytes() {
             self.counter = self.counter + 2;
             return self.parse_pointer();
         }
-        
-
-
         panic!("Missing something?");
     }
 
     fn parse_pointer(&mut self) -> Component {
-        println!("parsing Pointer");
         let component = self.parse_component();
         assert!(&self.bytes[self.counter..self.counter+1] == "}".as_bytes());
         self.counter = self.counter + 1;
@@ -249,7 +292,6 @@ impl Anon2Struct {
     }
 
     fn parse_name(&mut self) -> String {
-        println!("parsing  Name");
         self.counter = self.counter + 1;
         let mut id: Vec<u8> = Vec::new();
         let _ = loop {
@@ -267,11 +309,9 @@ impl Anon2Struct {
 
 
     fn parse_struct(&mut self) -> Component {
-        println!("parsing  ST");
-        let mut components: Vec<Component> = Vec::new();
+        let mut components: Vec<(String,Component)> = Vec::new();
         let _ = loop {
             let char = &self.bytes[self.counter..self.counter+1];
-            println!("Byte: {}", String::from_utf8_lossy(&char).to_string());
             if char == "]".as_bytes() {
                 self.counter = self.counter + 1;
                 break;
@@ -282,19 +322,14 @@ impl Anon2Struct {
 
             let component = self.parse_component();
             assert!(&self.bytes[self.counter..self.counter+1] == "'".as_bytes());
-            components.push(component);
             let name = self.parse_name();
-            println!("Name: {}", name);
-
-
+            components.push((name, component));
         };
 
         Component::Struct{components}
     }
 
     fn parse_sym(&mut self) -> Component {
-        println!("parsing  SYM");
-
         let mut id: Vec<u8> = Vec::new();
         let result = loop {
             let char = &self.bytes[self.counter..self.counter+1];
@@ -339,20 +374,18 @@ impl Irept {
         if self.named_subt.contains_key("components") {
             return;
         }
-        println!("Irept: {}", self);
-
         // ESBMC has no parser for this anon naming conventions.
-
-        let mut result = Irept::default();
-
-        let mut counter = 0;
-        let identifier = self.named_subt["identifier"].id.as_bytes();
-        
+        let identifier = self.named_subt["identifier"].id.as_bytes();        
         assert!(&identifier[0..10] == "tag-#anon#".as_bytes());
+        
         let mut parser = Anon2Struct {bytes: Vec::from(identifier), counter: 10, cache: HashMap::new()};
-        parser.parse_component();
+        let parsed_struct = Irept::from(parser.parse_component());
+        let components = parsed_struct.named_subt.get("components").unwrap().clone();        
+        self.named_subt.insert("components".to_string(), components);
 
-        panic!("error");
+        self.id = "struct".to_string();
+        //println!("Test {}", self);
+        //panic!("stop");
         
     }
     
@@ -377,13 +410,15 @@ impl Irept {
             return;
         }
 
-
         if !cache.contains_key(&self.named_subt["identifier"]) {
             self.expand_anon_struct();
+           
             return;
         }
 
         *self = cache[&self.named_subt["identifier"]].clone();
+        
+
     }
 }
 
@@ -447,6 +482,8 @@ pub fn process_cbmc_file(path: &str) -> CBMCParser {
 
         let mut symbol_irep = Irept::from(sym);
         symbol_irep.fix_type(&result.struct_cache);
+        
+        assert_ne!(symbol_irep.named_subt.get("type").unwrap().id, "struct_tag");
         result.symbols_irep.push(symbol_irep);
     }
 
@@ -501,6 +538,7 @@ pub fn process_cbmc_file(path: &str) -> CBMCParser {
         let function_name = function.name.clone();
         let mut function_irep = Irept::from(function);
         function_irep.fix_type(&result.struct_cache);
+
         result
             .functions_irep
             .push((function_name, function_irep));

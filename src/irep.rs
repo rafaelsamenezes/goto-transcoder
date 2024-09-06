@@ -57,7 +57,9 @@ impl From<&Irept> for JsonValue {
         for sub in &data.subt {
             sub_vec.push(JsonValue::from(sub));
         }
-        obj["subt"] = JsonValue::from(sub_vec);
+        if sub_vec.len() > 0 {
+            obj["subt"] = JsonValue::from(sub_vec);
+        }
 
         for (k,v) in &data.named_subt {
             obj[k] = JsonValue::from(v);

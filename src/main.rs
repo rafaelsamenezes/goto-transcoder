@@ -193,4 +193,13 @@ mod tests {
         run_goto_test("mul.goto", &["--goto-functions-only"], 6);
         run_goto_test("mul_contract.goto", &["--goto-functions-only"], 6);
     }
+
+    #[test]
+    #[ignore]
+    fn basic_exprs() {
+        // TODO:  "member", "typecast", "notequal", "or", "mod", "not", "*", "/", "+", "-", "=", "<", "lshr", "shl", "address_of", "index", "pointer_object", "array_of", "sideeffect", "dereference", "bitand"
+
+    }
+
+    
 }

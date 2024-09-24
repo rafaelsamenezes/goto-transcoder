@@ -14,7 +14,9 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    steps:
+    steps: 
+    - name: Install cbmc
+      run: apt update && apt install -y cbmc
     - uses: actions/checkout@v4
     - name: Build
       run: cargo build --verbose

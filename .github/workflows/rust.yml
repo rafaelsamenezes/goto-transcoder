@@ -17,10 +17,10 @@ jobs:
     steps: 
     - name: Install cbmc
       run: sudo apt-get update && sudo apt-get install -y cbmc && whereis goto-cc
+    - uses: actions/checkout@v4
     - name: Install ESBMC
       run: wget https://github.com/esbmc/esbmc/releases/download/v7.6.1/release-ubuntu-latest.zip && unzip release-ubuntu-latest.zip
-    - uses: actions/checkout@v4
     - name: Build
       run: cargo build --verbose
     - name: Run tests
-      run: cargo test -- --ignored
+      run: ESBMC=./bin/esbmc cargo test -- --ignored

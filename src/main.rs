@@ -92,6 +92,7 @@ mod tests {
             Err(err) => panic!("Could not get GOTO_CC bin. {}", err),
         };
         assert!(input_c.len() != 0);
+        println!("Invoking cbmc with: {}", input_c);
 
         let output = Command::new(goto_cc)
             .arg(input_c)

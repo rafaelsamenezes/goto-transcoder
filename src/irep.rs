@@ -12,7 +12,16 @@ impl Irept {
     pub fn fix_expression(&mut self) {
         if self.id == "side_effect" {
             self.id = "sideeffect".to_string();
-        } 
+        }
+
+        if self.id == "constant" && self.named_subt.contains_key("#base") {
+            // Value ID might be the decimal/hexa representation, we want the binary one!
+            println!{"had {}", &self.named_subt["value"].id};
+            let number = u64::from_str_radix(&self.named_subt["value"].id, 16).unwrap();
+            println!{"parsed {}", number};
+            self.named_subt.insert(String::from("value"), Irept::from(format!("{:064b}", number)));           
+        }
+
 
         let expressions: HashSet<String> = HashSet::from(
             [

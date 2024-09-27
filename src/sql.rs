@@ -54,7 +54,7 @@ impl SqlWriter {
         let mut counter = 0;
         for irep in symbols {
             debug!("Writing symbol: {}", irep.id);
-            let id = writer.write_reference(&irep);            
+            let id = writer.write_reference(&irep);
             // The ordering might be important!
             writer
                 .connection
@@ -152,13 +152,12 @@ pub struct SqlReader {
 }
 
 impl SqlReader {
-
     pub fn open(path: &str) -> Self {
         SqlReader {
-            connection: Connection::open(path).unwrap()
+            connection: Connection::open(path).unwrap(),
         }
     }
-    
+
     pub fn get_symbols(&self) -> Vec<Irept> {
         let mut stmt = self.connection.prepare("SELECT irep FROM Symbol").unwrap();
         let mut rows = stmt.query([]).unwrap();
@@ -192,19 +191,25 @@ impl SqlReader {
     }
 
     fn read_string(&self, string_id: usize) -> String {
-        let id: String = self.connection.query_row(
-        "SELECT value FROM String WHERE id=(?1)",
-        [string_id],
-            |row| row.get(0)).unwrap();
+        let id: String = self
+            .connection
+            .query_row(
+                "SELECT value FROM String WHERE id=(?1)",
+                [string_id],
+                |row| row.get(0),
+            )
+            .unwrap();
         id
     }
 
     fn read_irep(&self, table_id: usize) -> Irept {
         // Get id
-        let string_id: usize = self.connection.query_row(
-        "SELECT value FROM Irep WHERE id=(?1)",
-        [table_id],
-            |row| row.get(0)).unwrap();
+        let string_id: usize = self
+            .connection
+            .query_row("SELECT value FROM Irep WHERE id=(?1)", [table_id], |row| {
+                row.get(0)
+            })
+            .unwrap();
 
         let id: String = self.read_string(string_id);
 
@@ -220,7 +225,7 @@ impl SqlReader {
             let sub_id: usize = row.get(0).unwrap();
             subt.push(self.read_irep(sub_id));
         }
-        
+
         // Get named sub
         let mut named_subt: HashMap<String, Irept> = HashMap::new();
         let mut named_stmt = self
@@ -247,8 +252,12 @@ impl SqlReader {
             comments.insert(self.read_string(name_id), self.read_irep(sub_id));
         }
 
-        // Result        
-        Irept {id, subt, named_subt, comments }
+        // Result
+        Irept {
+            id,
+            subt,
+            named_subt,
+            comments,
+        }
     }
 }
-

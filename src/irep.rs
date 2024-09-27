@@ -16,17 +16,38 @@ impl Irept {
 
         if self.id == "constant" && self.named_subt.contains_key("#base") {
             // Value ID might be the decimal/hexa representation, we want the binary one!
-            println!{"had {}", &self.named_subt["value"].id};
+            println! {"had {}", &self.named_subt["value"].id};
             let number = u64::from_str_radix(&self.named_subt["value"].id, 16).unwrap();
-            println!{"parsed {}", number};
-            self.named_subt.insert(String::from("value"), Irept::from(format!("{:064b}", number)));           
+            println! {"parsed {}", number};
+            self.named_subt.insert(
+                String::from("value"),
+                Irept::from(format!("{:064b}", number)),
+            );
         }
-
 
         let expressions: HashSet<String> = HashSet::from(
             [
-                "member", "typecast", "notequal", "or", "mod", "not", "*", "/", "+", "-", "=", "<",
-                "lshr", "shl", "address_of", "index", "pointer_object", "array_of", "sideeffect", "dereference", "bitand"
+                "member",
+                "typecast",
+                "notequal",
+                "or",
+                "mod",
+                "not",
+                "*",
+                "/",
+                "+",
+                "-",
+                "=",
+                "<",
+                "lshr",
+                "shl",
+                "address_of",
+                "index",
+                "pointer_object",
+                "array_of",
+                "sideeffect",
+                "dereference",
+                "bitand",
             ]
             .map(|x| x.to_string()),
         );
@@ -43,7 +64,6 @@ impl Irept {
         }
 
         for (k, v) in &mut self.named_subt {
-
             if k == "components" {
                 for sub in &mut v.subt {
                     sub.id = "component".to_string();
@@ -57,10 +77,8 @@ impl Irept {
 use json::object;
 use json::JsonValue;
 impl From<&Irept> for JsonValue {
-
-
     fn from(data: &Irept) -> Self {
-        let mut obj = object!{id: data.id.clone()};
+        let mut obj = object! {id: data.id.clone()};
 
         let mut sub_vec: Vec<JsonValue> = Vec::new();
         for sub in &data.subt {
@@ -70,18 +88,17 @@ impl From<&Irept> for JsonValue {
             obj["subt"] = JsonValue::from(sub_vec);
         }
 
-        for (k,v) in &data.named_subt {
+        for (k, v) in &data.named_subt {
             obj[k] = JsonValue::from(v);
         }
 
-        for (k,v) in &data.comments {
+        for (k, v) in &data.comments {
             obj[k] = JsonValue::from(v);
         }
-        
+
         obj
     }
 }
-
 
 impl std::hash::Hash for Irept {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
@@ -113,7 +130,7 @@ impl Eq for Irept {}
 impl std::fmt::Display for Irept {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let as_json = JsonValue::from(self);
-        write!(f, "{}", json::stringify_pretty(as_json,4))
+        write!(f, "{}", json::stringify_pretty(as_json, 4))
     }
 }
 

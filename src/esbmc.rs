@@ -1,5 +1,5 @@
-pub use crate::Irept;
 use crate::ByteReader;
+pub use crate::Irept;
 
 #[derive(Clone, Debug)]
 pub struct ESBMCParser {
@@ -72,7 +72,11 @@ mod tests {
 
         let result = process_esbmc_file(test_path.to_str().unwrap()).unwrap();
         std::fs::remove_file("/tmp/test.sqlite3").ok();
-        SqlWriter::write_to_file(result.symbols_irep, result.functions_irep, "/tmp/test.sqlite3");
+        SqlWriter::write_to_file(
+            result.symbols_irep,
+            result.functions_irep,
+            "/tmp/test.sqlite3",
+        );
     }
 
     use crate::sql::SqlReader;

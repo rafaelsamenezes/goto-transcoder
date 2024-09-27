@@ -126,7 +126,6 @@ mod tests {
             .expect("Failed to execute process");
 
         if !output.status.success() {
-            
             println!("ESBMC exited with {}", output.status);
             println!(
                 "\tSTDOUT: {}",
@@ -195,7 +194,7 @@ mod tests {
         // Unsafe
         // run_test("hello_world_fail.c", &["--incremental-bmc"], 1);
         //run_test("hello_struct.c", &["--incremental-bmc"], 1);
-         //run_test("hello_anon_struct.c", &["--incremental-bmc"], 1);
+        //run_test("hello_anon_struct.c", &["--incremental-bmc"], 1);
         //run_test("hello_field.c", &["--goto-functions-only"], 6);
         //
         //run_goto_test("mul_contract.goto", &["--goto-functions-only"], 6);
@@ -206,5 +205,4 @@ mod tests {
     fn goto_test() {
         run_goto_test("mul.goto", &["--goto-functions-only"], 6);
     }
-
 }

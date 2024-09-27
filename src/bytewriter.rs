@@ -3,7 +3,6 @@ use log::trace;
 use std::collections::HashMap;
 use std::io::Write;
 
-
 pub struct ByteWriter {
     file: Vec<u8>,
     irep_container: HashMap<Irept, u32>,
@@ -13,7 +12,11 @@ pub struct ByteWriter {
 impl ByteWriter {
     pub fn write_to_file(symbols: Vec<Irept>, functions: Vec<(String, Irept)>, output: &str) {
         trace!("Writing goto file: {}", output);
-        let mut writer = ByteWriter {file: Vec::new(), irep_container: HashMap::new(), string_ref_container: HashMap::new()};
+        let mut writer = ByteWriter {
+            file: Vec::new(),
+            irep_container: HashMap::new(),
+            string_ref_container: HashMap::new(),
+        };
         writer.file.push(b'G');
         writer.file.push(b'B');
         writer.file.push(b'F');
@@ -23,17 +26,17 @@ impl ByteWriter {
         writer.write_u32(symbols.len() as u32);
         for irep in symbols {
             writer.write_reference(&irep);
-        }        
+        }
 
         // Add functions
         writer.write_u32(functions.len() as u32);
         for (name, irep) in functions {
-            writer.write_string(&name);            
+            writer.write_string(&name);
             writer.write_reference(&irep);
         }
 
         let mut file = std::fs::File::create(output).unwrap();
-        file.write_all(&writer.file).unwrap();        
+        file.write_all(&writer.file).unwrap();
     }
 
     fn write_string(&mut self, value: &str) {
@@ -42,7 +45,7 @@ impl ByteWriter {
             self.file.push(byte.clone());
         }
         self.file.push(0);
-    }   
+    }
 
     fn write_u32(&mut self, value: u32) {
         // TODO: Maybe there is a better way
@@ -56,13 +59,13 @@ impl ByteWriter {
             self.write_reference(irep);
         }
 
-        for (name,irep) in &value.named_subt {
+        for (name, irep) in &value.named_subt {
             self.file.push(b'N');
             self.write_string_reference(name);
             self.write_reference(irep);
         }
 
-        for (name,irep) in &value.comments {
+        for (name, irep) in &value.comments {
             self.file.push(b'C');
             self.write_string_reference(name);
             self.write_reference(irep);
@@ -81,7 +84,6 @@ impl ByteWriter {
         self.irep_container.insert(value.clone(), id);
         self.write_u32(id);
         self.write_irep(value);
-        
     }
     fn write_string_reference(&mut self, value: &str) {
         if self.string_ref_container.contains_key(value) {
@@ -93,6 +95,5 @@ impl ByteWriter {
         self.string_ref_container.insert(String::from(value), id);
         self.write_u32(id);
         self.write_string(value);
-        
     }
 }

@@ -147,8 +147,6 @@ impl ByteReader {
         result
     }
 
-    
-
     // String parsing.
 
     pub fn read_esbmc_string(&mut self) -> String {
@@ -238,31 +236,37 @@ impl ByteReader {
 
     // GBF checks
 
-    pub fn check_esbmc_header(&mut self) -> Result<(),String> {
+    pub fn check_esbmc_header(&mut self) -> Result<(), String> {
         trace!("Checking header");
         assert!(self.file.len() >= 4);
         let header = vec![self.file[0], self.file[1], self.file[2]];
         let gbf = vec![b'G', b'B', b'F'];
         if header != gbf {
-            return Err(format!("Invalid ESBMC header. Found: {}{}{}", header[0], header[1], header[2]));
+            return Err(format!(
+                "Invalid ESBMC header. Found: {}{}{}",
+                header[0], header[1], header[2]
+            ));
         }
         self.pointer = 3;
         Ok(())
     }
 
-    pub fn check_cbmc_header(&mut self) -> Result<(),String> {
+    pub fn check_cbmc_header(&mut self) -> Result<(), String> {
         trace!("Checking header");
         assert!(self.file.len() >= 4);
         let header = vec![self.file[0], self.file[1], self.file[2], self.file[3]];
         let gbf = vec![0x7f, b'G', b'B', b'F'];
         if header != gbf {
-            return Err(format!("Invalid CBMC header. Found: {}{}{}{}", header[0], header[1], header[2], header[3]));
+            return Err(format!(
+                "Invalid CBMC header. Found: {}{}{}{}",
+                header[0], header[1], header[2], header[3]
+            ));
         }
         self.pointer = 4;
         Ok(())
     }
 
-    pub fn check_esbmc_version(&mut self) -> Result<(),String> {
+    pub fn check_esbmc_version(&mut self) -> Result<(), String> {
         let version = self.read_esbmc_word();
         if version != 1 {
             return Err(format!("Invalid ESBMC version. Found {}", version));
@@ -270,7 +274,7 @@ impl ByteReader {
         Ok(())
     }
 
-    pub fn check_cbmc_version(&mut self) -> Result<(),String> {
+    pub fn check_cbmc_version(&mut self) -> Result<(), String> {
         let version = self.read_cbmc_word();
         if version != 6 {
             return Err(format!("Invalid CBMC version. Found {}", version));

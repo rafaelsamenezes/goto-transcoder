@@ -1,5 +1,5 @@
 pub use crate::Irept;
-use log::{debug, error, trace};
+use log::trace;
 use std::collections::HashMap;
 use std::fs;
 use std::str;

@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 pub use crate::Irept;
-use crate::{ByteReader, ByteWriter};
-use log::{debug, error, trace};
+use crate::ByteReader;
+use log::debug;
 
 #[derive(Clone, Debug)]
 pub struct CBMCSymbol {

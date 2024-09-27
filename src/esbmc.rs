@@ -1,5 +1,5 @@
 pub use crate::Irept;
-use crate::{ByteReader, ByteWriter};
+use crate::ByteReader;
 
 #[derive(Clone, Debug)]
 pub struct ESBMCParser {

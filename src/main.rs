@@ -84,7 +84,7 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use std::{os::unix::process::ExitStatusExt, process::Command};
+    use std::process::Command;
 
     fn generate_cbmc_gbf(input_c: &str) {
         let goto_cc = match std::env::var("GOTO_CC") {

@@ -16,7 +16,7 @@ jobs:
 
     steps: 
     - name: Install cbmc
-      run: wget https://github.com/diffblue/cbmc/releases/download/cbmc-6.3.1/ubuntu-22.04-cbmc-6.3.1-Linux.deb && dpkg -i ubuntu-22.04-cbmc-6.3.1-Linux.deb
+      run: wget https://github.com/diffblue/cbmc/releases/download/cbmc-6.3.1/ubuntu-22.04-cbmc-6.3.1-Linux.deb && sudo dpkg -i ubuntu-22.04-cbmc-6.3.1-Linux.deb && goto-cc --version
     - uses: actions/checkout@v4
     - name: Install ESBMC
       run: wget https://github.com/esbmc/esbmc/releases/download/v7.6.1/release-ubuntu-latest.zip && unzip release-ubuntu-latest.zip

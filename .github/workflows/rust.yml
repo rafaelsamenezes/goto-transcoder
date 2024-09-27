@@ -21,7 +21,7 @@ jobs:
     - name: Install ESBMC
       run: wget https://github.com/esbmc/esbmc/releases/download/v7.6.1/release-ubuntu-latest.zip && unzip release-ubuntu-latest.zip
     - name: Permission fix
-      run: $ sudo chown -R $(whoami) $HOME/.cargo/
+      run: sudo chown -R $(whoami) $HOME/.cargo/
     - name: Build
       run: cargo build --verbose
     - name: Run tests

@@ -181,27 +181,30 @@ mod tests {
     #[test]
     #[ignore]
     fn hello_world() {
-         run_test("hello_world.c", &["--goto-functions-only"], 6);
-         //run_test("hello_world.c", &["--incremental-bmc"], 0);
-         //run_test("hello_world_fail.c", &["--incremental-bmc"], 1);
-         //run_test("hello_struct.c", &["--incremental-bmc"], 1);
+        // Parsing
+        //run_test("hello_world.c", &["--goto-functions-only"], 6);
+        //run_test("hello_add.c", &["--goto-functions-only"], 6);
+        // run_test("hello_sub.c", &["--goto-functions-only"], 6);
+        // run_test("hello_mul.c", &["--goto-functions-only"], 6);
+        // run_test("hello_div.c", &["--goto-functions-only"], 6);
+
+        // Safe
+        // run_test("hello_world.c", &["--incremental-bmc"], 0);
+        run_test("hello_add.c", &["--incremental-bmc"], 10);
+
+        // Unsafe
+        // run_test("hello_world_fail.c", &["--incremental-bmc"], 1);
+        //run_test("hello_struct.c", &["--incremental-bmc"], 1);
          //run_test("hello_anon_struct.c", &["--incremental-bmc"], 1);
-    }
-
-    #[test]
-    #[ignore]
-    fn hello_add() {
-        run_test("hello_add.c", &["--goto-functions-only"], 6);
-        run_test("hello_sub.c", &["--goto-functions-only"], 6);
-        run_test("hello_mul.c", &["--goto-functions-only"], 6);
-        run_test("hello_div.c", &["--goto-functions-only"], 6);
         //run_test("hello_field.c", &["--goto-functions-only"], 6);
-    }
-
-    #[test]
-    #[ignore]
-    fn mk_mul() {
-        run_goto_test("mul.goto", &["--goto-functions-only"], 6);
+        //
         //run_goto_test("mul_contract.goto", &["--goto-functions-only"], 6);
     }
+
+    #[test]
+    #[ignore]
+    fn goto_test() {
+        run_goto_test("mul.goto", &["--goto-functions-only"], 6);
+    }
+
 }

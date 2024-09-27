@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::ByteReader;
+use crate::ByteWriter;
 pub use crate::Irept;
 use log::debug;
 

@@ -1,4 +1,5 @@
 use crate::ByteReader;
+use crate::ByteWriter;
 pub use crate::Irept;
 
 #[derive(Clone, Debug)]

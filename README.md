@@ -109,23 +109,141 @@ Irep {
 ```
 
 
-### ESBMC GBF
+## TODO: CBMC <--> ESBMC Progress
 
-### CBMC GBF
+### List of Irep equivalences
 
-## Intrinsic functions
+Here is the tracking of the ireps that were already implemented and have at least two tests.
+
+#### Types
+
+| ESBMC      | CBMC     | Implemented |
+|------------|----------|-------------|
+| signedbv   | signedbv | y           |
+| pointer    | pointer  | Y           |
+| unsignedbv | ?        | N           |
+| complex    | ?        | N           |
+| floatbv    | ?        | N           |
+| fixedbv    | ?        | N           |
+| bool       | ?        | N           |
+| empty      | ?        | N           |
+| symbol     | ?        | N           |
+| struct     | ?        | N           |
+| union      | ?        | N           |
+| class      | ?        | N           |
+| code       | ?        | N           |
+| array      | ?        | N           |
+| #reference | ?        | N           |
+| bv         | ?        | N           |
+| vector     | vector   | N           |
+| intcap     | N/A      | N           |
+| uintcap    | N/A      | N           |
+
+
+#### Expressions
+
+| ESBMC              | CBMC        | Implemented |
+|--------------------|-------------|-------------|
+| trans              | ?           | N           |
+| symbol             | ?           | N           |
+| +                  | +           | Y           |
+| -                  | -           | Y           |
+| *                  | *           | Y           |
+| /                  | /           | Y           |
+| mod                | mod         | N           |
+| =                  | =           | Y           |
+| notequal           | notequal    | Y           |
+| index              | index       | N           |
+| array-of           | ?           | N           |
+| object-descriptor  | ?           | N           |
+| dynamic-object     | ?           | N           |
+| typecast           | typecast    | Y           |
+| =>                 | ?           | N           |
+| and                | ?           | N           |
+| xor                | ?           | N           |
+| or                 | ?           | N           |
+| not                | ?           | N           |
+| address-of         | address-of  | Y           |
+| dereference        | dereference | Y           |
+| if                 | ?           | N           |
+| with               | ?           | N           |
+| member             | ?           | N           |
+| isnan              | ?           | N           |
+| ieee-float-equal   | ?           | N           |
+| type               | ?           | N           |
+| constant           | constant    | N           |
+| true               | true        | Y           |
+| false              | false       | Y           |
+| <                  | <           | Y           |
+| >                  | >           | N           |
+| <=                 | <=          | N           |
+| >=                 | >=          | N           |
+| bitand             | bitand      | N           |
+| bitor              | bitor       | N           |
+| bitxor             | bitxor      | N           |
+| bitnand            | bitnand     | N           |
+| bitnor             | bitnor      | N           |
+| bitnxor            | bitnxor     | N           |
+| bitnot             | bitnot      | N           |
+| ashr               | ashr        | N           |
+| lshr               | lshr        | N           |
+| shl                | shl         | N           |
+| abs                | abs         | N           |
+| argument           | ?           | N           |
+| sideffect          | ?           | N           |
+| code               | ?           | N           |
+| skip               | ?           | N           |
+| assign             | ?           | N           |
+| bitcast            | ?           | N           |
+| nearbyint          | ?           | N           |
+| abs                | ?           | N           |
+| ieee-add           | ?           | N           |
+| ieee-sub           | ?           | N           |
+| ieee-mul           | ?           | N           |
+| ieee-div           | ?           | N           |
+| ieee-fma           | ?           | N           |
+| ieee-sqrt          | ?           | N           |
+| popcount           | ?           | N           |
+| bswap              | ?           | N           |
+| same-object        | ?           | N           |
+| pointer-offset     | ?           | N           |
+| pointer-object     | ?           | N           |
+| pointer-capability | N/A         | N           |
+| byte-extract       | ?           | N           |
+| byte-update        | ?           | N           |
+| code-block         | ?           | N           |
+| code-assign        | ?           | N           |
+| code-init          | ?           | N           |
+| code-decl          | ?           | N           |
+| code-dead          | ?           | N           |
+| code-printf        | ?           | N           |
+| code-expression    | ?           | N           |
+| code-return        | ?           | N           |
+| code-skip          | ?           | N           |
+| code-free          | ?           | N           |
+| code-goto          | ?           | N           |
+| code-function-call | ?           | N           |
+| code-comma         | ?           | N           |
+| invalid-pointer    | ?           | N           |
+| code-asm           | ?           | N           |
+| isinf              | ?           | N           |
+| isnormal           | ?           | N           |
+| isfinite           | ?           | N           |
+| signbit            | ?           | N           |
+| concat             | ?           | N           |
+| extract            | ?           | N           |
+
+
+
+
+### Intrinsic Functions
 
 ESBMC and CBMC also relies on some intrinsic functions. These need operational models (or equivalent implementations) for the translation to work properly.
 Also, some are the same with different names, e.g.: `__CPROVER__start = __ESBMC_main`
 
-### CBMC
+#### CBMC 
 
 ```
-_Bool __ESBMC_is_allocated[&symbol] __infinity
-_Bool __ESBMC_is_free[&symbol] __infinity
-size_t __ESBMC_allocated_size[&symbol] __infinity
-
-
 __CPROVER__start
 __CPROVER_initialize
 __CPROVER_max_malloc_size
@@ -167,9 +285,13 @@ __CPROVER_architecture_long_double_width
 __CPROVER_architecture_wchar_t_width
 ```
 
-### ESBMC
+#### ESBMC
 
 ```
+_Bool __ESBMC_is_allocated[&symbol] __infinity
+_Bool __ESBMC_is_free[&symbol] __infinity
+size_t __ESBMC_allocated_size[&symbol] __infinity
+
 __ESBMC_num_total_threads
 __ESBMC_num_threads_running
 __ESBMC_unreachable

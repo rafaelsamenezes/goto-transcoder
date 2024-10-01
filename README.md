@@ -1,40 +1,39 @@
 # GOTO Transcoder
 
-This project is still in early development stages.
-
-```mermaid
-flowchart TD
-    C[GOTO Transcoder]
-    A[ESBMC GBF] <--> C[GOTO Transcoder]
-    S[SQLite] <--> C
-    B[CBMC GBF] <--> C
-```
-
-## Use
-
-### CBMC -> ESBMC
+This project is still in early development stages. The goal here is to have a tool that facilitates visualizing and changing GOTO programs generated from ESBMC and CBMC by:
+- Parsing the GBF (goto binary format?) from ESBMC and CBMC
+- Writing into GBF to ESBMC/CBMC. Allowing to convert between both versions.
+ 
+### Use
 
 1. Generate the GBF from CBMC: `goto-cc file.c`. This will generate an `a.out`, for this example we will rename it to `file-cbmc.goto`.
 2. To convert from CBMC into ESBMC: `cargo run -- --mode 0 --input file-cbmc.goto --output file-esbmc.goto`.
 3. Run ESBMC: `esbmc --binary file-esbmc.goto --goto-functions-only`.
 
+## Architecture
 
-## Goal
+```mermaid
+flowchart LR
+    A[GOTO] --> R
+    R[Reader] --> G
+    G[Abstract GOTO]
+    G --> W
+    W[Writer]
+    W --> T[GOTO]
+```
 
+### Reader
 
+A reader is a type class responsible to parse a GBF (goto binary format) into the Abstract Goto Grammar. This is project dependent and may change without any notice. This is usually fine for reading numbers, strings and references. The issue
+raises from the incompatibility of instrumentations. There a few interesting files from both ESBMC/CBMC to extract the implementation: `read_goto_bin.cpp`, `irep_serialization.cpp` and the primitives themselves. That being said, most of the basics from both ESBMC/CBMC should be fine at this point.
 
-The goal here is to have a tool that facilitates visualizing and changing GOTO programs generated from ESBMC and CBMC by:
+### Writer
 
-- Parsing the GBF (goto binary format?) from ESBMC and CBMC
-- Writing GBF into an db (sqlite). 
-- Writing into GBF to ESBMC/CBMC. Allowing to convert between both versions (note that this is not a compatibility layer, I expect a third-party app that will use the sqlite to adapt the program).
-- Parsing a db into ESBMC/CBMC GBF.
-
-## Format
+### Abstract GOTO
 
 A full GOTO program consists in a set of Symbols and a set of Functions. 
 
-### Irep
+#### Irep
 
 Considering ESBMC and CBMC the most important data structure to consider is the Irep (intermediate representation?). It is a string based format that is used to contain all values from the program. As an example for the constant 42:
 
@@ -63,7 +62,7 @@ Irep {
 Neither CBMC not ESBMC will use a "String" directly, they use a string cache which is only used by reference. This is also true for the binary formats.
 
 
-### Symbol
+#### Symbol
 
 A symbol is an Irep of the form:
 
@@ -98,7 +97,7 @@ Irep {
 }
 ```
 
-### Function
+#### Function
 
 A Function is of the pair <String, Irept>, where the first is the function name and the second is the set of instructions (in Irep):
 
@@ -108,9 +107,6 @@ Irep {
   subt: <instructions> // optional
 }
 ```
-
-
-
 
 
 ### ESBMC GBF

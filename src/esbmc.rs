@@ -60,43 +60,5 @@ mod tests {
         ByteWriter::write_to_file(result.symbols_irep, result.functions_irep, "/tmp/test.goto");
     }
 
-    use crate::sql::SqlWriter;
-    #[test]
-    fn test_write_sql_file() {
-        let cargo_dir = match std::env::var("CARGO_MANIFEST_DIR") {
-            Ok(v) => v,
-            Err(err) => panic!("Could not open cargo folder. {}", err),
-        };
 
-        let test_path = std::path::Path::new(&cargo_dir).join("resources/test/hello.goto");
-        assert!(test_path.exists());
-
-        let result = process_esbmc_file(test_path.to_str().unwrap()).unwrap();
-        std::fs::remove_file("/tmp/test.sqlite3").ok();
-        SqlWriter::write_to_file(
-            result.symbols_irep,
-            result.functions_irep,
-            "/tmp/test.sqlite3",
-        );
-    }
-
-    use crate::sql::SqlReader;
-    #[test]
-    fn test_read_sql_file() {
-        let cargo_dir = match std::env::var("CARGO_MANIFEST_DIR") {
-            Ok(v) => v,
-            Err(err) => panic!("Could not open cargo folder. {}", err),
-        };
-
-        let test_path = std::path::Path::new(&cargo_dir).join("resources/test/hello.sqlite3");
-        assert!(test_path.exists());
-
-        let reader = SqlReader::open(test_path.to_str().unwrap());
-
-        let symbols = reader.get_symbols();
-        let functions = reader.get_functions();
-
-        std::fs::remove_file("/tmp/sqlite3_test.goto").ok();
-        ByteWriter::write_to_file(symbols, functions, "/tmp/sqlite3_test.goto");
-    }
 }

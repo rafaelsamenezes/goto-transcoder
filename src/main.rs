@@ -9,10 +9,7 @@ pub use bytereader::ByteReader;
 pub mod bytewriter;
 pub use bytewriter::ByteWriter;
 use log::info;
-use sql::SqlReader;
-use sql::SqlWriter;
 
-pub mod sql;
 
 pub mod cbmc;
 pub mod esbmc;
@@ -22,27 +19,6 @@ fn cbmc2esbmc(input: &str, output: &str) {
     let result = crate::cbmc::process_cbmc_file(input);
     std::fs::remove_file(output).ok();
     ByteWriter::write_to_file(result.symbols_irep, result.functions_irep, output);
-}
-
-fn cbmc2sqlite(input: &str, output: &str) {
-    info!("Converting CBMC input into SQLite");
-    let result = crate::cbmc::process_cbmc_file(input);
-    std::fs::remove_file(output).ok();
-    SqlWriter::write_to_file(result.symbols_irep, result.functions_irep, output);
-}
-
-fn sqlite2esbmc(input: &str, output: &str) {
-    info!("Converting SQLite input into ESBMC");
-    let result = SqlReader::open(input);
-    std::fs::remove_file(output).ok();
-    ByteWriter::write_to_file(result.get_symbols(), result.get_functions(), output);
-}
-
-fn esbmc2sqlite(input: &str, output: &str) {
-    info!("Converting ESBMC input into SQLite");
-    let result = crate::esbmc::process_esbmc_file(input).unwrap();
-    std::fs::remove_file(output).ok();
-    SqlWriter::write_to_file(result.symbols_irep, result.functions_irep, output);
 }
 
 fn init() {
@@ -73,9 +49,6 @@ fn main() {
 
     match args.mode {
         0 => cbmc2esbmc(&args.input, &args.output),
-        1 => cbmc2sqlite(&args.input, &args.output),
-        2 => sqlite2esbmc(&args.input, &args.output),
-        3 => esbmc2sqlite(&args.input, &args.output),
         _ => panic!("Invalid mode: {}", args.mode),
     };
 
@@ -125,6 +98,7 @@ mod tests {
             .output()
             .expect("Failed to execute process");
 
+        assert_eq!(status, output.status.code().unwrap());
         if !output.status.success() {
             println!("ESBMC exited with {}", output.status);
             println!(
@@ -135,7 +109,6 @@ mod tests {
                 "\tSTDERR: {}",
                 String::from_utf8_lossy(&output.stderr).to_string()
             );
-            assert_eq!(status, output.status.code().unwrap());
         }
     }
 
@@ -181,18 +154,17 @@ mod tests {
     #[ignore]
     fn hello_world() {
         // Parsing
-        //run_test("hello_world.c", &["--goto-functions-only"], 6);
-        //run_test("hello_add.c", &["--goto-functions-only"], 6);
-        // run_test("hello_sub.c", &["--goto-functions-only"], 6);
-        // run_test("hello_mul.c", &["--goto-functions-only"], 6);
-        // run_test("hello_div.c", &["--goto-functions-only"], 6);
-
+        run_test("hello_world.c", &["--goto-functions-only"], 6);
+        run_test("hello_world.c", &["--incremental-bmc"], 0);
+        run_test("hello_world_fail.c", &["--incremental-bmc"], 1);
+        run_test("hello_add.c", &["--goto-functions-only"], 6);
+        run_test("hello_add.c", &["--incremental-bmc"], 0);
+        run_test("hello_mul.c", &["--goto-functions-only"], 6);
+        run_test("hello_div.c", &["--goto-functions-only"], 6);
+        run_test("hello_sub.c", &["--goto-functions-only"], 6);
         // Safe
-        // run_test("hello_world.c", &["--incremental-bmc"], 0);
-        run_test("hello_add.c", &["--incremental-bmc"], 10);
 
         // Unsafe
-        // run_test("hello_world_fail.c", &["--incremental-bmc"], 1);
         //run_test("hello_struct.c", &["--incremental-bmc"], 1);
         //run_test("hello_anon_struct.c", &["--incremental-bmc"], 1);
         //run_test("hello_field.c", &["--goto-functions-only"], 6);

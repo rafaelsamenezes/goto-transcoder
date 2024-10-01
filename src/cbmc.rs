@@ -576,25 +576,6 @@ pub fn process_cbmc_file(path: &str) -> CBMCParser {
 mod tests {
     use super::*;
 
-    use crate::sql::SqlWriter;
-    #[test]
-    fn test_cbmc_to_sqlite_file() {
-        let cargo_dir = match std::env::var("CARGO_MANIFEST_DIR") {
-            Ok(v) => v,
-            Err(err) => panic!("Could not open cargo folder. {}", err),
-        };
-        let test_path = std::path::Path::new(&cargo_dir).join("resources/test/hello-gb.goto");
-        assert!(test_path.exists());
-
-        let result = process_cbmc_file(test_path.to_str().unwrap());
-
-        std::fs::remove_file("/tmp/test_cbmc.sqlite3").ok();
-        SqlWriter::write_to_file(
-            result.symbols_irep.clone(),
-            result.functions_irep.clone(),
-            "/tmp/test_cbmc.sqlite3",
-        );
-    }
 
     #[test]
     fn test_cbmc_to_esbmc_file() {

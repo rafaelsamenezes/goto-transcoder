@@ -98,7 +98,7 @@ mod tests {
             .output()
             .expect("Failed to execute process");
 
-        assert_eq!(status, output.status.code().unwrap());
+        
         if !output.status.success() {
             println!("ESBMC exited with {}", output.status);
             println!(
@@ -110,6 +110,7 @@ mod tests {
                 String::from_utf8_lossy(&output.stderr).to_string()
             );
         }
+        assert_eq!(status, output.status.code().unwrap());
     }
 
     use crate::cbmc;
@@ -132,7 +133,7 @@ mod tests {
         ByteWriter::write_to_file(result.symbols_irep, result.functions_irep, &esbmc_gbf);
 
         run_esbmc_gbf(&esbmc_gbf, args, expected);
-        //std::fs::remove_file(&esbmc_gbf).ok();
+        std::fs::remove_file(&esbmc_gbf).ok();
     }
 
     fn run_goto_test(input_goto: &str, args: &[&str], expected: i32) {
@@ -153,23 +154,39 @@ mod tests {
     #[test]
     #[ignore]
     fn hello_world() {
-        // Parsing
+        println!("Remember to set GOTO_CC and ESBMC environment variables!");
+        // Basic
         run_test("hello_world.c", &["--goto-functions-only"], 6);
         run_test("hello_world.c", &["--incremental-bmc"], 0);
         run_test("hello_world_fail.c", &["--incremental-bmc"], 1);
+        // +
         run_test("hello_add.c", &["--goto-functions-only"], 6);
         run_test("hello_add.c", &["--incremental-bmc"], 0);
-        run_test("hello_mul.c", &["--goto-functions-only"], 6);
-        run_test("hello_div.c", &["--goto-functions-only"], 6);
+        run_test("hello_add_fail.c", &["--incremental-bmc"], 1);
+        // -
         run_test("hello_sub.c", &["--goto-functions-only"], 6);
-        // Safe
-
-        // Unsafe
-        //run_test("hello_struct.c", &["--incremental-bmc"], 1);
-        //run_test("hello_anon_struct.c", &["--incremental-bmc"], 1);
-        //run_test("hello_field.c", &["--goto-functions-only"], 6);
-        //
-        //run_goto_test("mul_contract.goto", &["--goto-functions-only"], 6);
+        run_test("hello_sub.c", &["--incremental-bmc"], 0);
+        run_test("hello_sub_fail.c", &["--incremental-bmc"], 1);
+        // *
+        run_test("hello_mul.c", &["--goto-functions-only"], 6);
+        run_test("hello_mul.c", &["--incremental-bmc"], 0);
+        run_test("hello_mul_fail.c", &["--incremental-bmc"], 1);
+        // /
+        run_test("hello_div.c", &["--goto-functions-only"], 6);
+        run_test("hello_div.c", &["--incremental-bmc"], 0);
+        run_test("hello_div_fail.c", &["--incremental-bmc"], 1);
+        run_test("hello_div_zero_fail.c", &["--incremental-bmc"], 1);
+        run_test("hello_div_zero_fail.c", &["--incremental-bmc", "--no-div-by-zero-check"], 0);
+        // ==/!=
+        run_test("hello_equality.c", &["--goto-functions-only"], 6);
+        run_test("hello_equality.c", &["--incremental-bmc"], 0);
+        run_test("hello_equality_fail.c", &["--incremental-bmc"], 1);
+        // pointer (address_of)
+        run_test("hello_ptr.c", &["--goto-functions-only"], 6);
+        run_test("hello_ptr.c", &["--incremental-bmc"], 0);
+        run_test("hello_ptr_fail.c", &["--incremental-bmc"], 1);
+        
+        
     }
 
     #[test]

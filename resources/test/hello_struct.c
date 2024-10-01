@@ -6,5 +6,6 @@ struct obj {
 
 int main() {
   struct obj qwe;
+  qwe.a = 1;
   assert(qwe.a); 
 }

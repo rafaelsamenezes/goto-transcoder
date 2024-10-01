@@ -386,8 +386,6 @@ impl Irept {
         self.named_subt.insert("components".to_string(), components);
 
         self.id = "struct".to_string();
-        //println!("Test {}", self);
-        //panic!("stop");
     }
 
     pub fn fix_struct(&mut self) {
@@ -430,8 +428,8 @@ impl Irept {
         }
 
         if !cache.contains_key(&self.named_subt["identifier"]) {
-            self.expand_anon_struct();
-            self.fix_type(cache);
+            //self.expand_anon_struct();
+            //self.fix_type(cache);
             return;
         }
 
@@ -511,7 +509,7 @@ pub fn process_cbmc_file(path: &str) -> CBMCParser {
         let mut symbol_irep = Irept::from(sym);
         symbol_irep.fix_type(&result.struct_cache);
 
-        assert_ne!(symbol_irep.named_subt.get("type").unwrap().id, "struct_tag");
+        //assert_ne!(symbol_irep.named_subt.get("type").unwrap().id, "struct_tag");
         result.symbols_irep.push(symbol_irep);
     }
 

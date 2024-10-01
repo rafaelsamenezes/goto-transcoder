@@ -1,4 +1,4 @@
 #include <assert.h>
 int main() {
-  assert(10 * 2 < 25);
+  assert(10 - 2 < 0);
 }

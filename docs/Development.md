@@ -1,11 +1,46 @@
-# Development
+ # Development
+
+Most of the development/debugging right now is done by manually running the tool and checking if the output makes sense. This includes:
+
+1. Generating the CBMC gbf (`goto-cc`)
+2. Checking the output of CBMC for such a program (`cbmc <gbf file> --show-goto-functions`)
+3. Calling goto-transcoder to convert the gbf into esbmc gbf (check README.md for latest instructions)
+4. Invoking ESBMC with the converted gbf (`esbmc --binary <converted file> --goto-functions-only`)
+5. Verifying the program with ESBMC (`esbmc <converted file> <strategy>`)
+
+Note that ESBMC being able to parse the code does not mean that it was converted correctly. Some issues are very easy
+to catch such as number that was supposed to be 4 is now -42, however some of them can be very tricky when the issue is related to types mismatches or invalid parsing.
 
 ## Debugging expressions
 
-### Debugging unsuported CBMC expressions
-### Debugging unsupported ESBMC expressions
+The entry point for the CBMC parsing is the function `process_cbmc_file` inside the `cbmc.rs`. It consists in three main steps:
+1. Header validation. Failures here means that either an incompatible version of CBMC is being used or that the bytereader has problems. Consulting the `read_bin_goto_binary` files and functions inside cbmc can provide some guidance.
+2. Symbol table. All symbols are sequantially parsed into irep expressions, ireps can be printed at any time with a common format `println!("My irep: {}", irep)`
+3. Function parsing. Each function also contains a set of instructions that is sequentially parsed and associated into the function. Similarly, each function can be printed using the fmt.
 
-## Dealing with unsupported stuff
+### Fixing CBMC expressions
+
+As an example, one fix that it is needed for expressions is that in CBMC an expression such as 1 + 2 is defined (similarly):
+
+```
+id: "+"
+  - [constant 1, constant 2]
+  - type: ...
+  ...
+```
+
+ESBMC however expect this expression to be of the following form:
+
+```
+id: "+"
+  - operands:
+    - [constant 1, constant 2]
+  - type: ...
+  ...
+```
+
+Not for all expressions, though. All these hacks are defined in the function `fix_expression` at `irep.rs`. Adding new expressions is low hanging fruit (see list of equivalences).
+
 
 # List of Irep equivalences
 
@@ -216,3 +251,7 @@ __ESBMC_bitcast
 __ESBMC_memory_leak_checks
 __ESBMC_main
 ```
+
+### Unsupported stuff
+
+- Quantifiers

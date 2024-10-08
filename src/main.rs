@@ -10,7 +10,6 @@ pub mod bytewriter;
 pub use bytewriter::ByteWriter;
 use log::info;
 
-
 pub mod cbmc;
 pub mod esbmc;
 
@@ -98,7 +97,6 @@ mod tests {
             .output()
             .expect("Failed to execute process");
 
-        
         if !output.status.success() {
             println!("ESBMC exited with {}", output.status);
             println!(
@@ -176,7 +174,11 @@ mod tests {
         run_test("hello_div.c", &["--incremental-bmc"], 0);
         run_test("hello_div_fail.c", &["--incremental-bmc"], 1);
         run_test("hello_div_zero_fail.c", &["--incremental-bmc"], 1);
-        run_test("hello_div_zero_fail.c", &["--incremental-bmc", "--no-div-by-zero-check"], 0);
+        run_test(
+            "hello_div_zero_fail.c",
+            &["--incremental-bmc", "--no-div-by-zero-check"],
+            0,
+        );
         // ==/!=
         run_test("hello_equality.c", &["--goto-functions-only"], 6);
         run_test("hello_equality.c", &["--incremental-bmc"], 0);
@@ -185,8 +187,14 @@ mod tests {
         run_test("hello_ptr.c", &["--goto-functions-only"], 6);
         run_test("hello_ptr.c", &["--incremental-bmc"], 0);
         run_test("hello_ptr_fail.c", &["--incremental-bmc"], 1);
-        
-        
+        // aray
+        run_test("hello_array.c", &["--goto-functions-only"], 6);
+        run_test("hello_array.c", &["--incremental-bmc"], 0);
+        run_test("hello_array_fail.c", &["--goto-functions-only"], 6);
+        run_test("hello_array_fail.c", &["--incremental-bmc"], 1);
+        run_test("hello_array_fail_oob.c", &["--goto-functions-only"], 6);
+        run_test("hello_array_fail_oob.c", &["--incremental-bmc"], 1);
+        run_test("hello_array_fail_oob.c", &["--no-bounds-check"], 0);
     }
 
     #[test]

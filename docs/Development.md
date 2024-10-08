@@ -55,7 +55,7 @@ Here is the tracking of the ireps that were already implemented and have at leas
 
 | ESBMC      | CBMC     | Implemented |
 |------------|----------|-------------|
-| signedbv   | signedbv | y           |
+| signedbv   | signedbv | Y           |
 | pointer    | pointer  | Y           |
 | unsignedbv | ?        | N           |
 | complex    | ?        | N           |
@@ -68,7 +68,7 @@ Here is the tracking of the ireps that were already implemented and have at leas
 | union      | ?        | N           |
 | class      | ?        | N           |
 | code       | ?        | N           |
-| array      | ?        | N           |
+| array      | array    | Y           |
 | #reference | ?        | N           |
 | bv         | ?        | N           |
 | vector     | vector   | N           |

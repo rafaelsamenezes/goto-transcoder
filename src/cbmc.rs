@@ -407,6 +407,25 @@ impl Irept {
             self.subt.clear();
         }
 
+        if self.id == "array" && !self.named_subt.contains_key("subtype") {
+            let mut operands = Irept::default();
+            let magic = self.subt[0].clone();
+            self.named_subt.insert("subtype".to_string(), magic);
+            self.subt.clear();
+            for (k, v) in &mut self.named_subt {
+                if k == "size" {
+                    if v.named_subt.contains_key("value") {
+                        //v.fix_expression();
+                        let number = u64::from_str_radix(&v.named_subt["value"].id, 16).unwrap();
+                        v.named_subt.insert(
+                            String::from("value"),
+                            Irept::from(format!("{:064b}", number)),
+                        );
+                    }
+                }
+            }
+        }
+
         if self.id != "struct_tag" {
             for v in &mut self.subt {
                 v.fix_type(cache);

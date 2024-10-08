@@ -11,6 +11,11 @@ Most of the development/debugging right now is done by manually running the tool
 Note that ESBMC being able to parse the code does not mean that it was converted correctly. Some issues are very easy
 to catch such as number that was supposed to be 4 is now -42, however some of them can be very tricky when the issue is related to types mismatches or invalid parsing.
 
+## Adding test cases
+
+1. Define a goto-cc input or generate an CBMC compatible goto file and add it to `resources/test`
+2. At `main.rs` there two main test functions: `run_goto_test` (CBMC GBF -> ESBMC GBF -> ESBMC run) and `run_test` (GOTO-CC input -> CBMC GBF -> ESBMC GBF -> ESBMC run).
+
 ## Debugging expressions
 
 The entry point for the CBMC parsing is the function `process_cbmc_file` inside the `cbmc.rs`. It consists in three main steps:
@@ -163,9 +168,6 @@ Here is the tracking of the ireps that were already implemented and have at leas
 | signbit            | ?           | N           |
 | concat             | ?           | N           |
 | extract            | ?           | N           |
-
-
-
 
 ### Intrinsic Functions
 

@@ -25,6 +25,9 @@ The entry point for the CBMC parsing is the function `process_cbmc_file` inside 
 
 ### Fixing CBMC expressions
 
+In case the direct convertion results in a crash or incorrect parameter, it may be because ESBMC is eexpecting the IREP in a 
+different form. The easiest way to debug this is to check `migrate.cpp` at ESBMC and check which parameters are expected.
+
 As an example, one fix that it is needed for expressions is that in CBMC an expression such as 1 + 2 is defined (similarly):
 
 ```
@@ -44,7 +47,28 @@ id: "+"
   ...
 ```
 
-Not for all expressions, though. All these hacks are defined in the function `fix_expression` at `irep.rs`. Adding new expressions is low hanging fruit (see list of equivalences).
+We can know that by checking this specific case `migrate_expr`:
+
+```cpp
+  else if (expr.id() == exprt::plus)
+  {
+    type = migrate_type(expr.type());
+
+    expr2tc side1, side2;
+    if (expr.operands().size() > 2)
+    {
+      splice_expr(expr, new_expr_ref);
+      return;
+    }
+
+    convert_operand_pair(expr, side1, side2);
+
+    new_expr_ref = add2tc(type, side1, side2);
+  }
+
+```
+
+In here, `exprt::plus` is "+" (I highly recommend setting an LSP to ESBMC and CBMC) while `.operands()` access the "operands" field. All these hacks are defined in the function `fix_expression` at `irep.rs`. Adding new expressions is low hanging fruit (see list of equivalences).
 
 
 # List of Irep equivalences

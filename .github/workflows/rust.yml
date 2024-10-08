@@ -20,3 +20,5 @@ jobs:
       run: wget https://github.com/esbmc/esbmc/releases/download/v7.6.1/release-ubuntu-latest.zip && unzip release-ubuntu-latest.zip && chmod +x ./bin/esbmc && ./bin/esbmc --version
     - name: Build
       run: cargo build --verbose
+    - name: Test
+      run: cargo test -- --ignored

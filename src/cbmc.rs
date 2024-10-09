@@ -394,6 +394,8 @@ impl Irept {
 
     pub fn fix_type(&mut self, cache: &HashMap<Irept, Irept>) {
         //
+
+        
         if self.named_subt.contains_key("components") {
             for v in &mut self.named_subt.get_mut("components").unwrap().subt {
                 v.fix_struct();
@@ -453,6 +455,7 @@ impl Irept {
         }
 
         *self = cache[&self.named_subt["identifier"]].clone();
+     
     }
 }
 
@@ -524,13 +527,17 @@ pub fn process_cbmc_file(path: &str) -> CBMCParser {
             sym.mode = "C".to_string();
             sym.base_name = sym.name.clone();
         }
-
         let mut symbol_irep = Irept::from(sym);
         symbol_irep.fix_type(&result.struct_cache);
-
-        //assert_ne!(symbol_irep.named_subt.get("type").unwrap().id, "struct_tag");
         result.symbols_irep.push(symbol_irep);
     }
+
+    // Lets double check for fixes
+    for symbol in &mut result.symbols_irep {
+        symbol.fix_type(&result.struct_cache);
+        assert_ne!(symbol.named_subt["type"].id, "struct_tag");
+    }
+
 
     // Functions
     let number_of_functions = result.reader.read_cbmc_word();

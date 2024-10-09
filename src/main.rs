@@ -195,6 +195,10 @@ mod tests {
         run_test("hello_array_fail_oob.c", &["--goto-functions-only"], 6);
         run_test("hello_array_fail_oob.c", &["--incremental-bmc"], 1);
         run_test("hello_array_fail_oob.c", &["--no-bounds-check"], 0);
+        // Struct
+        run_test("hello_struct.c", &["--goto-functions-only"], 6);
+        run_test("hello_struct.c", &["--incremental-bmc"], 0);
+        run_test("hello_struct_fail.c", &["--incremental-bmc"], 1);
     }
 
     #[test]

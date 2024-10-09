@@ -1,5 +1,6 @@
 pub use crate::Irept;
 use log::trace;
+use log::debug;
 use std::collections::HashMap;
 use std::io::Write;
 
@@ -25,12 +26,14 @@ impl ByteWriter {
         // Add symbols
         writer.write_u32(symbols.len() as u32);
         for irep in symbols {
+            debug!("writing symbol {}", &irep);
             writer.write_reference(&irep);
         }
 
         // Add functions
         writer.write_u32(functions.len() as u32);
         for (name, irep) in functions {
+            debug!("writing function {}: {}", &name, &irep);
             writer.write_string(&name);
             writer.write_reference(&irep);
         }

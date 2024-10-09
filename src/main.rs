@@ -126,11 +126,11 @@ mod tests {
         generate_cbmc_gbf(test_path.to_str().unwrap());
 
         let result = cbmc::process_cbmc_file("a.out");
-        std::fs::remove_file("a.out").ok();
         std::fs::remove_file(&esbmc_gbf).ok();
         ByteWriter::write_to_file(result.symbols_irep, result.functions_irep, &esbmc_gbf);
 
         run_esbmc_gbf(&esbmc_gbf, args, expected);
+        std::fs::remove_file("a.out").ok();
         std::fs::remove_file(&esbmc_gbf).ok();
     }
 
@@ -147,6 +147,7 @@ mod tests {
         std::fs::remove_file(&esbmc_gbf).ok();
         ByteWriter::write_to_file(result.symbols_irep, result.functions_irep, &esbmc_gbf);
         run_esbmc_gbf(&esbmc_gbf, args, expected);
+        std::fs::remove_file(&esbmc_gbf).ok();
     }
 
     #[test]

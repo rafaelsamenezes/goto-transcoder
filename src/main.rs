@@ -200,6 +200,17 @@ mod tests {
         run_test("hello_struct.c", &["--goto-functions-only"], 6);
         run_test("hello_struct.c", &["--incremental-bmc"], 0);
         run_test("hello_struct_fail.c", &["--incremental-bmc"], 1);
+        // Function call
+        run_test("hello_func.c", &["--goto-functions-only"], 6);
+        run_test("hello_func.c", &["--incremental-bmc"], 0);
+        run_test("hello_func_fail.c", &["--incremental-bmc"], 1);
+    }
+
+    #[test]
+    #[ignore]
+    fn from_rust() {
+        // These are example taken from the Kani first steps and then translated into C
+        
     }
 
     #[test]

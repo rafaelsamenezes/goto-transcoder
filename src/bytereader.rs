@@ -46,7 +46,6 @@ impl ByteReader {
     }
 
     // Reference parsing. First try the cache, if not available then parse the irep
-
     pub fn read_esbmc_reference(&mut self) -> Irept {
         let id = self.read_esbmc_word();
         if self.irep_container.contains_key(&id) {

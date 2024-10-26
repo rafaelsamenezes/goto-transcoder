@@ -1,6 +1,6 @@
 pub use crate::Irept;
-use log::trace;
 use log::debug;
+use log::trace;
 use std::collections::HashMap;
 use std::io::Write;
 
@@ -12,9 +12,9 @@ pub struct ByteWriter {
 
 impl ByteWriter {
     pub fn write_to_file(symbols: Vec<Irept>, functions: Vec<(String, Irept)>, output: &str) {
-        trace!("Writing goto file: {}", output);
+        trace!("(ESBMC) Writing goto file: {}", output);
         let mut writer = ByteWriter {
-            file: Vec::new(),
+            file: Vec::with_capacity((functions.len() + symbols.len())*10),
             irep_container: HashMap::new(),
             string_ref_container: HashMap::new(),
         };
@@ -24,16 +24,16 @@ impl ByteWriter {
         writer.write_u32(1);
 
         // Add symbols
+        trace!("Writing symbols");
         writer.write_u32(symbols.len() as u32);
         for irep in symbols {
-            debug!("writing symbol {}", &irep);
             writer.write_reference(&irep);
         }
 
         // Add functions
+        trace!("Writing functions");
         writer.write_u32(functions.len() as u32);
         for (name, irep) in functions {
-            debug!("writing function {}: {}", &name, &irep);
             writer.write_string(&name);
             writer.write_reference(&irep);
         }
@@ -43,16 +43,12 @@ impl ByteWriter {
     }
 
     fn write_string(&mut self, value: &str) {
-        // TODO: Can we add a range into a vector directly?
-        for byte in value.as_bytes() {
-            self.file.push(byte.clone());
-        }
+        self.file.extend_from_slice(value.as_bytes());
         self.file.push(0);
     }
 
     fn write_u32(&mut self, value: u32) {
-        // TODO: Maybe there is a better way
-        value.to_be_bytes().map(|b| self.file.push(b));
+        self.file.extend_from_slice(&value.to_be_bytes());
     }
 
     fn write_irep(&mut self, value: &Irept) {

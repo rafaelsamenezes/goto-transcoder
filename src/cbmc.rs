@@ -414,7 +414,6 @@ impl Irept {
         }
 
         if self.id == "array" && !self.named_subt.contains_key("subtype") {
-            let mut operands = Irept::default();
             let magic = self.subt[0].clone();
             self.named_subt.insert("subtype".to_string(), magic);
             self.subt.clear();
@@ -604,8 +603,6 @@ pub fn process_cbmc_file(path: &str) -> CBMCParser {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-
     #[test]
     fn test_cbmc_to_esbmc_file() {
         let cargo_dir = match std::env::var("CARGO_MANIFEST_DIR") {

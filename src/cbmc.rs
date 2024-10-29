@@ -160,7 +160,10 @@ pub fn process_cbmc_file(path: &str) -> CBMCParser {
         let mut function = CBMCFunction {
             name: function_name,
             instructions: Vec::with_capacity(num_of_instructions as usize),
+            
         };
+
+        let mut target_revmap: HashMap<u32, u32> = HashMap::new();
 
         for _ in 0..num_of_instructions {
             // # instructions
@@ -169,12 +172,20 @@ pub fn process_cbmc_file(path: &str) -> CBMCParser {
             let source_location = result.reader.read_cbmc_reference();
             let instr_type = result.reader.read_cbmc_word();
             let guard = result.reader.read_cbmc_reference();
+
+            // Label?
             let target_number = result.reader.read_cbmc_word();
 
+            // NOTE: ESBMC/CBMC uses the number offset of the function as the target
+            //       which is fine for most cases. But CBMC for some reason likes to
+            //       start from 1 and have a target number associated to the instruction.
+            //       So we first parse everything and then fix the target numbers
+            target_revmap.insert(target_number, function.instructions.len() as u32);
             // Add targets
             let t_count = result.reader.read_cbmc_word();
             let mut targets: Vec<Irept> = Vec::new();
             for _ in 0..t_count {
+                // TODO: These should be stored as numbers.
                 targets.push(Irept::from(result.reader.read_cbmc_word().to_string()));
             }
 
@@ -197,10 +208,18 @@ pub fn process_cbmc_file(path: &str) -> CBMCParser {
                 function: Irept::from(&function.name),
             })
         }
+        // lets fix the targets
+        for f in &mut function.instructions {
+            for t in &mut f.targets {
+                let unsigned_value: u32 = t.id.parse().unwrap();
+                let target_fixed = target_revmap.get(&unsigned_value).unwrap().to_string();
+                t.id = target_fixed;
+            }
+        }
+        
         let function_name = function.name.clone();
         let mut function_irep = Irept::from(function);
-        function_irep.fix_type(&result.struct_cache);
-
+        function_irep.fix_type(&result.struct_cache);        
         result.functions_irep.push((function_name, function_irep));
     }
     result

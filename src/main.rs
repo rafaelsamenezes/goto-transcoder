@@ -207,8 +207,13 @@ mod tests {
         // Goto-Label
         run_test("hello_label.c", &["--goto-functions-only"], 0);
         run_test("hello_label.c", &["--k-induction"], 0);
-        run_test("hello_label_fail.c", &["--incremental-bmc"], 1);    
+        run_test("hello_label_fail.c", &["--incremental-bmc"], 1);
+        // If
+        run_test("hello_if.c", &["--goto-functions-only"], 0);
+        run_test("hello_if.c", &["--incremental-bmc"], 0);
+        run_test("hello_if_fail.c", &["--incremental-bmc"], 1);
     }
+    
 
     #[test]
     #[ignore]

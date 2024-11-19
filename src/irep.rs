@@ -1,8 +1,8 @@
 use json::object;
 use json::JsonValue;
+use log::info;
 use std::collections::HashMap;
 use std::collections::HashSet;
-
 #[derive(Clone, Debug)]
 pub struct Irept {
     pub id: String,
@@ -126,9 +126,11 @@ impl Irept {
 
         let expressions: HashSet<String> = HashSet::from(
             [
+                "if",
                 "member",
                 "typecast",
                 "notequal",
+                "and",
                 "or",
                 "mod",
                 "not",
@@ -138,10 +140,12 @@ impl Irept {
                 "-",
                 "=",
                 "<",
+                ">",
                 "lshr",
                 "shl",
                 "address_of",
                 "index",
+                "byte_extract_little_endian",
                 "pointer_object",
                 "array_of",
                 "sideeffect",

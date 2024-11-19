@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::ByteReader;
 pub use crate::Irept;
 use log::debug;
+use log::info;
 
 ///////////////
 // CBMC DATA //
@@ -24,10 +25,7 @@ pub struct CBMCSymbol {
 }
 
 impl CBMCSymbol {
-    fn fix_symbol(&mut self) {
-        
-        
-    }
+    fn fix_symbol(&mut self) {}
 }
 
 // Direct parsing result of an instruction
@@ -52,10 +50,10 @@ pub struct CBMCFunction {
 
 impl CBMCFunction {
     fn fix_name(name: &str) -> String {
-         match name {
+        match name {
             "__CPROVER__start" => String::from("__ESBMC_main"),
-            _ => String::from(name)
-        }        
+            _ => String::from(name),
+        }
     }
 }
 
@@ -106,8 +104,8 @@ pub fn process_cbmc_file(path: &str) -> CBMCParser {
 
         // Ordering is used for historical reasons.
         let ordering = result.reader.read_cbmc_word();
-        assert_eq!(ordering,0);
-        
+        assert_eq!(ordering, 0);
+
         sym.flags = result.reader.read_cbmc_word();
 
         sym.is_type = sym.flags & (1 << 15) != 0;
@@ -149,18 +147,16 @@ pub fn process_cbmc_file(path: &str) -> CBMCParser {
         assert_ne!(symbol.named_subt["type"].id, "c_bool");
     }
 
-
     // Functions
     let number_of_functions = result.reader.read_cbmc_word();
     debug!("Got {} functions", number_of_functions);
     for _ in 0..number_of_functions {
         let function_name = CBMCFunction::fix_name(&result.reader.read_gb_string());
-        let num_of_instructions =  result.reader.read_cbmc_word();
+        let num_of_instructions = result.reader.read_cbmc_word();
 
         let mut function = CBMCFunction {
             name: function_name,
             instructions: Vec::with_capacity(num_of_instructions as usize),
-            
         };
 
         let mut target_revmap: HashMap<u32, u32> = HashMap::new();
@@ -216,15 +212,14 @@ pub fn process_cbmc_file(path: &str) -> CBMCParser {
                 t.id = target_fixed;
             }
         }
-        
+
         let function_name = function.name.clone();
         let mut function_irep = Irept::from(function);
-        function_irep.fix_type(&result.struct_cache);        
+        function_irep.fix_type(&result.struct_cache);
         result.functions_irep.push((function_name, function_irep));
     }
     result
 }
-
 
 impl From<CBMCSymbol> for Irept {
     fn from(data: CBMCSymbol) -> Self {
@@ -285,6 +280,11 @@ impl From<CBMCInstruction> for Irept {
         code.subt.clear();
         code.named_subt.insert("operands".to_string(), operands);
 
+        // Some checks
+        if code.id != "nil" && code.named_subt.get("statement").unwrap().id == "assign" {
+            assert_eq!(2, code.named_subt.get("operands").unwrap().subt.len());
+            info!("{}", code.to_string());
+        }
         result.named_subt.insert("code".to_string(), code);
 
         result
@@ -351,7 +351,6 @@ impl Default for CBMCSymbol {
     }
 }
 
-
 #[derive(Clone, Debug)]
 enum Component {
     Struct {
@@ -369,9 +368,7 @@ enum Component {
     },
 }
 
-impl Component {
-    
-}
+impl Component {}
 
 fn from_struct(components: Vec<(String, Component)>) -> Irept {
     let mut result = Irept::from("struct");
@@ -581,7 +578,7 @@ impl Irept {
             self.id = String::from("signedbv");
             return;
         }
-        
+
         if self.named_subt.contains_key("components") {
             for v in &mut self.named_subt.get_mut("components").unwrap().subt {
                 v.fix_struct();
@@ -595,7 +592,7 @@ impl Irept {
             self.subt.clear();
         }
 
-        if self.id == "array" && !self.named_subt.contains_key("subtype") {
+        if self.id == "array" && !self.named_subt.contains_key("subtype") && self.subt.len() > 0 {
             let magic = self.subt[0].clone();
             self.named_subt.insert("subtype".to_string(), magic);
             self.subt.clear();
@@ -640,7 +637,6 @@ impl Irept {
         }
 
         *self = cache[&self.named_subt["identifier"]].clone();
-     
     }
 }
 

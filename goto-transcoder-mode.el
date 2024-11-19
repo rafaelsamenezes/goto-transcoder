@@ -1,8 +1,6 @@
-;;; goto_transcoder.el --- Defines the elisp functions for this project -*- lexical-binding: t -*-
+;;; goto_transcoder-mode.el --- Defines the elisp functions for this project -*- lexical-binding: t -*-
 ;;; Commentary:
 ;;; Code:
-
-(require 'project)
 
 (defun goto-transcoder-setup ()
   "Set up the project main commands for use with project."
@@ -25,4 +23,4 @@
 
 (provide 'goto-transcoder-mode)
 
-;;; goto_transcoder.el ends here
+;;; goto_transcoder-mode.el ends here

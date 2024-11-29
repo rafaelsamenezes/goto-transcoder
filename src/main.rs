@@ -1,63 +1,85 @@
-use env_logger::Env;
+mod adapter;
+mod bytereader;
+mod bytewriter;
+mod cbmc;
+mod esbmc;
+mod irep;
+mod resources;
 
-pub mod irep;
+pub use bytereader::ByteReader;
+pub use bytewriter::ByteWriter;
 pub use irep::Irept;
 
-pub mod bytereader;
-pub use bytereader::ByteReader;
-
-pub mod bytewriter;
-pub use bytewriter::ByteWriter;
-use log::info;
-
-pub mod cbmc;
-pub mod esbmc;
+use log::trace;
 
 fn cbmc2esbmc(input: &str, output: &str) {
-    info!("Converting CBMC input into ESBMC");
+    trace!("cbmc2esbmc mode, {} {}", input, output);
+
     let result = crate::cbmc::process_cbmc_file(input);
     std::fs::remove_file(output).ok();
+
     ByteWriter::write_to_file(result.symbols_irep, result.functions_irep, output);
 }
-
 fn init() {
+    use env_logger::Env;
     let env = Env::default()
-        .filter_or("MY_LOG_LEVEL", "info")
-        .write_style_or("MY_LOG_STYLE", "always");
+        .filter_or("LOG_LEVEL", "info")
+        .write_style_or("LOG_STYLE", "always");
 
     env_logger::init_from_env(env);
 }
 
-use clap::Parser;
+use clap::{Args, Parser, Subcommand};
 
-#[derive(Parser, Debug)]
+#[derive(Parser)]
 #[command(version, about, long_about = None)]
-struct Args {
-    /// Qwe
-    #[arg(short, long)]
-    mode: u8, // TODO: this should be an enum
-    #[arg(short, long)]
-    input: String,
-    #[arg(short, long)]
-    output: String,
+#[command(propagate_version = true)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Converts CBMC <INPUT> into ESBMC <OUTPUT>
+    CBMC2ESBMC(CmdArgs),
+    /// Converts CBMC <INPUT> into JSON <OUTPUT>
+    CBMC2JSON(CmdArgs),
+    /// Converts ESBMC <INPUT> into CBMC <OUTPUT>
+    ESBMC2CBMC(CmdArgs),
+    /// Converts ESBMC <INPUT> into JSON <OUTPUT>
+    ESBMC2JSON(CmdArgs),
+    /// Converts JSON <INPUT> into CBMC <OUTPUT>
+    JSON2CBMC(CmdArgs),
+    /// Converts JSON <INPUT> into ESBMC <OUTPUT>
+    JSON2ESBMC(CmdArgs),
+}
+
+#[derive(Args)]
+struct CmdArgs {
+    input: std::path::PathBuf,
+    output: std::path::PathBuf,
 }
 
 fn main() {
     init();
-    let args = Args::parse();
+    trace!("Starting goto-transcoder");
+    let cli = Cli::parse();
 
-    match args.mode {
-        0 => cbmc2esbmc(&args.input, &args.output),
-        _ => panic!("Invalid mode: {}", args.mode),
+    match cli.command {
+        Commands::CBMC2ESBMC(args) => {
+            cbmc2esbmc(&args.input.to_str().unwrap(), args.output.to_str().unwrap());
+        }
+        _ => panic!("Command not implemented yet"),
     };
 
-    info!("Done");
+    trace!("Done");
 }
 
 #[cfg(test)]
 mod tests {
     use std::process::Command;
-    
+
     fn generate_cbmc_gbf(input_c: &str) {
         let goto_cc = match std::env::var("GOTO_CC") {
             Ok(v) => v,
@@ -121,7 +143,7 @@ mod tests {
         };
         let test_path =
             std::path::Path::new(&cargo_dir).join(format!("resources/test/{}", input_c));
-        let esbmc_gbf = format!("{}.goto", input_c);        
+        let esbmc_gbf = format!("{}.goto", input_c);
 
         generate_cbmc_gbf(test_path.to_str().unwrap());
 

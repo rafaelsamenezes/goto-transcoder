@@ -1,4 +1,4 @@
-use crate::ByteReader;
+use crate::bytereader::ByteReader;
 use crate::ByteWriter;
 pub use crate::Irept;
 
@@ -38,8 +38,6 @@ pub fn process_esbmc_file(path: &str) -> Result<ESBMCParseResult, String> {
 
     return Ok(result);
 }
-
-// TODO: ESBMCSymbol and create ESBMCSymbol from CBMCSymbol
 
 #[cfg(test)]
 mod tests {

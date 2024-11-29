@@ -8,6 +8,7 @@ mod resources;
 
 pub use bytereader::ByteReader;
 pub use bytewriter::ByteWriter;
+use esbmc::ESBMCParseResult;
 pub use irep::Irept;
 
 use log::trace;
@@ -15,10 +16,13 @@ use log::trace;
 fn cbmc2esbmc(input: &str, output: &str) {
     trace!("cbmc2esbmc mode, {} {}", input, output);
 
-    let result = crate::cbmc::process_cbmc_file(input);
+    let result = crate::cbmc::process_cbmc_file1(input);
     std::fs::remove_file(output).ok();
 
-    ByteWriter::write_to_file(result.symbols_irep, result.functions_irep, output);
+    let converted = ESBMCParseResult::from(result);
+    //let converted = result;
+    std::fs::remove_file(&output).ok();
+    ByteWriter::write_to_file(converted.symbols_irep, converted.functions_irep, output);
 }
 fn init() {
     use env_logger::Env;
@@ -134,6 +138,7 @@ mod tests {
     }
 
     use crate::cbmc;
+    use crate::cbmc2esbmc;
     use crate::ByteWriter;
 
     fn run_test(input_c: &str, args: &[&str], expected: i32) {
@@ -147,10 +152,7 @@ mod tests {
 
         generate_cbmc_gbf(test_path.to_str().unwrap());
 
-        let result = cbmc::process_cbmc_file("a.out");
-        std::fs::remove_file(&esbmc_gbf).ok();
-        ByteWriter::write_to_file(result.symbols_irep, result.functions_irep, &esbmc_gbf);
-
+        cbmc2esbmc("a.out", esbmc_gbf.as_str());
         run_esbmc_gbf(&esbmc_gbf, args, expected);
         std::fs::remove_file("a.out").ok();
         std::fs::remove_file(&esbmc_gbf).ok();
@@ -163,11 +165,9 @@ mod tests {
         };
         let test_path =
             std::path::Path::new(&cargo_dir).join(format!("resources/test/{}", input_goto));
-        let result = cbmc::process_cbmc_file(test_path.to_str().unwrap());
 
         let esbmc_gbf = format!("{}.goto", input_goto); // TODO: generate UUID!
-        std::fs::remove_file(&esbmc_gbf).ok();
-        ByteWriter::write_to_file(result.symbols_irep, result.functions_irep, &esbmc_gbf);
+        cbmc2esbmc(test_path.to_str().unwrap(), esbmc_gbf.as_str());
         run_esbmc_gbf(&esbmc_gbf, args, expected);
         std::fs::remove_file(&esbmc_gbf).ok();
     }
@@ -235,13 +235,11 @@ mod tests {
         run_test("hello_if.c", &["--incremental-bmc"], 0);
         run_test("hello_if_fail.c", &["--incremental-bmc"], 1);
     }
-    
 
     #[test]
     #[ignore]
     fn from_rust() {
         // These are example taken from the Kani first steps and then translated into C
-        
     }
 
     #[test]

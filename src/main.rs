@@ -16,7 +16,7 @@ use log::trace;
 fn cbmc2esbmc(input: &str, output: &str) {
     trace!("cbmc2esbmc mode, {} {}", input, output);
 
-    let result = crate::cbmc::process_cbmc_file1(input);
+    let result = crate::cbmc::process_cbmc_file(input);
     std::fs::remove_file(output).ok();
 
     let converted = ESBMCParseResult::from(result);

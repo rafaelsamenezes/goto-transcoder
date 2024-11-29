@@ -3,14 +3,14 @@ use crate::ByteWriter;
 pub use crate::Irept;
 
 #[derive(Clone, Debug)]
-pub struct ESBMCParser {
+pub struct ESBMCParseResult {
     pub reader: ByteReader,
     pub symbols_irep: Vec<Irept>,
     pub functions_irep: Vec<(String, Irept)>,
 }
 
-pub fn process_esbmc_file(path: &str) -> Result<ESBMCParser, String> {
-    let mut result = ESBMCParser {
+pub fn process_esbmc_file(path: &str) -> Result<ESBMCParseResult, String> {
+    let mut result = ESBMCParseResult {
         reader: ByteReader::read_file(path),
         functions_irep: Vec::new(),
         symbols_irep: Vec::new(),
@@ -59,6 +59,4 @@ mod tests {
         std::fs::remove_file("/tmp/test.goto").ok();
         ByteWriter::write_to_file(result.symbols_irep, result.functions_irep, "/tmp/test.goto");
     }
-
-
 }

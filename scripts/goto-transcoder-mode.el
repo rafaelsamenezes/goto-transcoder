@@ -7,6 +7,7 @@
   (setq-local compile-command "cargo build"))
 
 (defun goto-transcoder-test ()
+  "Run all test cases from the project."
   (interactive)
   (async-shell-command "cargo test -- --ignored"))
 
@@ -22,5 +23,4 @@
     ()))
 
 (provide 'goto-transcoder-mode)
-
-;;; goto_transcoder-mode.el ends here
+;;; goto-transcoder-mode.el ends here

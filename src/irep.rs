@@ -1,10 +1,10 @@
 use json::object;
 use json::JsonValue;
-use log::info;
 use std::collections::HashMap;
 use std::collections::HashSet;
 #[derive(Clone, Debug)]
 pub struct Irept {
+    // TODO: This should be references and not copies!
     pub id: String,
     pub subt: Vec<Irept>,
     pub named_subt: HashMap<String, Irept>,
@@ -110,6 +110,7 @@ impl From<&str> for Irept {
 }
 
 impl Irept {
+    // TODO: This should not be here
     pub fn fix_expression(&mut self) {
         if self.id == "side_effect" {
             self.id = "sideeffect".to_string();

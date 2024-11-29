@@ -1,4 +1,5 @@
-pub use crate::Irept;
+use crate::Irept;
+
 use log::trace;
 use std::collections::HashMap;
 use std::fs;
@@ -196,18 +197,13 @@ impl ByteReader {
     // Word reading (as u32)
 
     pub fn read_esbmc_word(&mut self) -> u32 {
-        // TODO: a slice might be better here, but then Rust will complain that
-        // it can't know the array length statically.
-        let raw_bytes = [
-            self.file[self.pointer],
-            self.file[self.pointer + 1],
-            self.file[self.pointer + 2],
-            self.file[self.pointer + 3],
-        ];
+        let raw_bytes: &[u8; 4] = self.file[self.pointer..self.pointer + 4]
+            .try_into()
+            .expect("Slice should be of length 4");
         self.pointer += 4;
 
         // ESBMC generates this in BE form
-        u32::from_be_bytes(raw_bytes)
+        u32::from_be_bytes(*raw_bytes)
     }
 
     pub fn read_cbmc_word(&mut self) -> u32 {
@@ -236,11 +232,13 @@ impl ByteReader {
     // GBF checks
 
     pub fn check_esbmc_header(&mut self) -> Result<(), String> {
-        trace!("Checking header");
-        assert!(self.file.len() >= 4);
-        let header = vec![self.file[0], self.file[1], self.file[2]];
-        let gbf = vec![b'G', b'B', b'F'];
-        if header != gbf {
+        trace!("Checking esbmc header");
+        let header: &[u8; 3] = self.file[0..3]
+            .try_into()
+            .expect("GBF does not contain header");
+
+        let gbf: [u8; 3] = [b'G', b'B', b'F'];
+        if *header != gbf {
             return Err(format!(
                 "Invalid ESBMC header. Found: {}{}{}",
                 header[0], header[1], header[2]
@@ -253,9 +251,12 @@ impl ByteReader {
     pub fn check_cbmc_header(&mut self) -> Result<(), String> {
         trace!("Checking header");
         assert!(self.file.len() >= 4);
-        let header = vec![self.file[0], self.file[1], self.file[2], self.file[3]];
-        let gbf = vec![0x7f, b'G', b'B', b'F'];
-        if header != gbf {
+        let header: &[u8; 4] = self.file[0..4]
+            .try_into()
+            .expect("GBF does not contain header");
+
+        let gbf: [u8; 4] = [0x7f, b'G', b'B', b'F'];
+        if *header != gbf {
             return Err(format!(
                 "Invalid CBMC header. Found: {}{}{}{}",
                 header[0], header[1], header[2], header[3]
@@ -276,7 +277,10 @@ impl ByteReader {
     pub fn check_cbmc_version(&mut self) -> Result<(), String> {
         let version = self.read_cbmc_word();
         if version != 6 {
-            return Err(format!("Invalid CBMC version. Found {}", version));
+            return Err(format!(
+                "Invalid CBMC version. Found {}. Only 6 is supported.",
+                version
+            ));
         }
         Ok(())
     }

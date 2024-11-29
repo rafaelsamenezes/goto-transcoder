@@ -17,8 +17,8 @@ jobs:
       run: wget https://github.com/diffblue/cbmc/releases/download/cbmc-6.3.1/ubuntu-22.04-cbmc-6.3.1-Linux.deb && sudo dpkg -i ubuntu-22.04-cbmc-6.3.1-Linux.deb && goto-cc --version
     - uses: actions/checkout@v4
     - name: Install ESBMC
-      run: wget https://github.com/esbmc/esbmc/releases/download/nightly-fd2534e5f9ab8955ec3acf35783a4cbb06f69748/esbmc-linux.zip && unzip release-ubuntu-latest.zip && chmod +x ./bin/esbmc && ./bin/esbmc --version
+      run: wget https://github.com/esbmc/esbmc/releases/download/nightly-fd2534e5f9ab8955ec3acf35783a4cbb06f69748/esbmc-linux.zip && unzip esbmc-linux.zip && chmod +x ./linux-release/bin/esbmc && ./linux-release/bin/esbmc --version
     - name: Build
       run: cargo build --verbose
     - name: Test
-      run: GOTO_CC=goto-cc ESBMC=$PWD/bin/esbmc cargo test -- --ignored
+      run: GOTO_CC=goto-cc ESBMC=$PWD/linux-release/bin/esbmc cargo test -- --ignored

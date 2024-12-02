@@ -32,7 +32,7 @@ impl ByteReader {
 
     pub fn read_file(path: &str) -> Self {
         trace!("Reading goto file: {}", path);
-        let byte_content = fs::read(path).expect("Could not read file");
+        let byte_content = fs::read(path).expect(format!("Could not read file {}", path).as_str());
         ByteReader::from(byte_content)
     }
 

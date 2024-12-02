@@ -2,9 +2,24 @@
 
 use std::collections::{HashMap, HashSet};
 
+use crate::bytereader::ByteReader;
+use crate::bytewriter::ByteWriter;
 use crate::cbmc::{CBMCFunction, CBMCInstruction, CBMCParseResult, CBMCSymbol};
 use crate::esbmc::ESBMCParseResult;
 use crate::irep::Irept;
+use log::trace;
+
+pub fn cbmc2esbmc(input: &str, output: &str) {
+    trace!("cbmc2esbmc mode, {} {}", input, output);
+
+    let result = crate::cbmc::process_cbmc_file(input);
+    std::fs::remove_file(output).ok();
+
+    let converted = ESBMCParseResult::from(result);
+    //let converted = result;
+    std::fs::remove_file(&output).ok();
+    ByteWriter::write_to_file(converted.symbols_irep, converted.functions_irep, output);
+}
 
 trait IrepAdapter {
     fn to_esbmc_irep(self) -> Irept;
@@ -32,7 +47,7 @@ impl From<CBMCParseResult> for ESBMCParseResult {
             adapted.symbols_irep.push(sym.to_esbmc_irep());
         }
 
-        // Lets double check for fixes
+        // A symbol might have been defined later, we need to check everything again
         for symbol in &mut adapted.symbols_irep {
             symbol.fix_type(&type_cache);
             assert_ne!(symbol.named_subt["type"].id, "struct_tag");
@@ -84,12 +99,16 @@ mod esbmcfixes {
             irep.id = "sideeffect".to_string();
         }
 
-        if irep.id == "constant" && irep.named_subt.contains_key("#base") {
+        if irep.id == "constant"
+            && !["pointer", "bool", "array"].contains(&irep.named_subt["type"].id.as_str())
+        {
+            // && irep.named_subt.contains_key("#base")
             // Value ID might be the decimal/hexa representation, we want the binary one!
-            let number = u64::from_str_radix(&irep.named_subt["value"].id, 16).unwrap();
+            let base: u32 = 16;
+            let number = u64::from_str_radix(&irep.named_subt["value"].id, base).unwrap();
             irep.named_subt.insert(
                 String::from("value"),
-                Irept::from(format!("{:064b}", number)),
+                Irept::from(format!("{:032b}", number)),
             );
         }
 
@@ -524,18 +543,16 @@ impl Irept {
             let magic = self.subt[0].clone();
             self.named_subt.insert("subtype".to_string(), magic);
             self.subt.clear();
-            for (k, v) in &mut self.named_subt {
-                if k == "size" {
-                    if v.named_subt.contains_key("value") {
-                        //v.fix_expression();
-                        let number = u64::from_str_radix(&v.named_subt["value"].id, 16).unwrap();
-                        v.named_subt.insert(
-                            String::from("value"),
-                            Irept::from(format!("{:064b}", number)),
-                        );
-                    }
-                }
-            }
+            // NOTE: For some unknown reason, CBMC already
+            //provides array sizes in binary
+            // for (k, v) in &mut self.named_subt {
+            //     if k == "size" {
+            //         if v.named_subt.contains_key("value") {
+
+            //             //esbmcfixes::fix_expression(v);
+            //         }
+            //     }
+            // }
         }
 
         if self.id != "struct_tag" {
@@ -559,11 +576,230 @@ impl Irept {
         }
 
         if !cache.contains_key(&self.named_subt["identifier"]) {
+            panic!("Here {}", self.to_string());
             //self.expand_anon_struct();
             //self.fix_type(cache);
             return;
         }
 
         *self = cache[&self.named_subt["identifier"]].clone();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::process::Command;
+
+    fn generate_cbmc_gbf(input_c: &str, output_goto: &str) {
+        let goto_cc = match std::env::var("GOTO_CC") {
+            Ok(v) => v,
+            Err(err) => panic!("Could not get GOTO_CC bin. {}", err),
+        };
+        assert!(input_c.len() != 0);
+        println!("Invoking cbmc with: {}", input_c);
+
+        let output = Command::new(goto_cc)
+            .arg(input_c)
+            .arg("-o")
+            .arg(output_goto)
+            .output()
+            .expect("failed to execute process");
+
+        if !output.status.success() {
+            println!("CBMC exited with {}", output.status);
+            println!(
+                "\tSTDOUT: {}",
+                String::from_utf8_lossy(&output.stdout).to_string()
+            );
+            println!(
+                "\tSTDERR: {}",
+                String::from_utf8_lossy(&output.stderr).to_string()
+            );
+            panic!("GOTO-CC failed");
+        }
+    }
+
+    fn run_esbmc_gbf(input_gbf: &str, args: &[&str], status: i32) {
+        let esbmc = match std::env::var("ESBMC") {
+            Ok(v) => v,
+            Err(err) => panic!("Could not get ESBMC bin. {}", err),
+        };
+        let output = Command::new(esbmc)
+            .arg("--binary")
+            .arg(input_gbf)
+            .args(args)
+            .output()
+            .expect("Failed to execute process");
+
+        if !output.status.success() {
+            println!("ESBMC exited with {}", output.status);
+            println!(
+                "\tSTDOUT: {}",
+                String::from_utf8_lossy(&output.stdout).to_string()
+            );
+            println!(
+                "\tSTDERR: {}",
+                String::from_utf8_lossy(&output.stderr).to_string()
+            );
+        }
+        assert_eq!(status, output.status.code().unwrap());
+    }
+
+    use crate::cbmc;
+    use crate::cbmc2esbmc;
+    use crate::ByteWriter;
+
+    fn run_test(input_c: &str, args: &[&str], expected: i32) {
+        let cargo_dir = match std::env::var("CARGO_MANIFEST_DIR") {
+            Ok(v) => v,
+            Err(err) => panic!("Could not open cargo folder. {}", err),
+        };
+        let test_path =
+            std::path::Path::new(&cargo_dir).join(format!("resources/test/{}", input_c));
+        let cbmc_gbf = format!("{}.cbmc.goto", input_c);
+        let esbmc_gbf = format!("{}.esbmc.goto", input_c);
+
+        generate_cbmc_gbf(test_path.to_str().unwrap(), cbmc_gbf.as_str());
+
+        cbmc2esbmc(cbmc_gbf.as_str(), esbmc_gbf.as_str());
+        run_esbmc_gbf(&esbmc_gbf, args, expected);
+        std::fs::remove_file(&cbmc_gbf).ok();
+        std::fs::remove_file(&esbmc_gbf).ok();
+    }
+
+    fn run_goto_test(input_goto: &str, args: &[&str], expected: i32) {
+        let cargo_dir = match std::env::var("CARGO_MANIFEST_DIR") {
+            Ok(v) => v,
+            Err(err) => panic!("Could not open cargo folder. {}", err),
+        };
+        let test_path =
+            std::path::Path::new(&cargo_dir).join(format!("resources/test/{}", input_goto));
+
+        let esbmc_gbf = format!("{}.goto", input_goto); // TODO: generate UUID!
+        cbmc2esbmc(test_path.to_str().unwrap(), esbmc_gbf.as_str());
+        run_esbmc_gbf(&esbmc_gbf, args, expected);
+        std::fs::remove_file(&esbmc_gbf).ok();
+    }
+
+    #[test]
+    #[ignore]
+    fn hello_world() {
+        println!("Remember to set GOTO_CC and ESBMC environment variables!");
+        // Basic
+        run_test("hello_world.c", &["--goto-functions-only"], 0);
+        run_test("hello_world.c", &["--incremental-bmc"], 0);
+        run_test("hello_world_fail.c", &["--incremental-bmc"], 1);
+    }
+
+    #[test]
+    #[ignore]
+    fn hello_add() {
+        // +
+        run_test("hello_add.c", &["--goto-functions-only"], 0);
+        run_test("hello_add.c", &["--incremental-bmc"], 0);
+        run_test("hello_add_fail.c", &["--incremental-bmc"], 1);
+    }
+
+    #[test]
+    #[ignore]
+    fn hello_sub() {
+        // -
+        run_test("hello_sub.c", &["--goto-functions-only"], 0);
+        run_test("hello_sub.c", &["--incremental-bmc"], 0);
+        run_test("hello_sub_fail.c", &["--incremental-bmc"], 1);
+    }
+    #[test]
+    #[ignore]
+    fn hello_mul() {
+        // *
+        run_test("hello_mul.c", &["--goto-functions-only"], 0);
+        run_test("hello_mul.c", &["--incremental-bmc"], 0);
+        run_test("hello_mul_fail.c", &["--incremental-bmc"], 1);
+    }
+    #[test]
+    #[ignore]
+    fn hello_div() {
+        // /
+        run_test("hello_div.c", &["--goto-functions-only"], 0);
+        run_test("hello_div.c", &["--incremental-bmc"], 0);
+        run_test("hello_div_fail.c", &["--incremental-bmc"], 1);
+        run_test("hello_div_zero_fail.c", &["--incremental-bmc"], 1);
+        run_test(
+            "hello_div_zero_fail.c",
+            &["--incremental-bmc", "--no-div-by-zero-check"],
+            0,
+        );
+    }
+    #[test]
+    #[ignore]
+    fn hello_eq() {
+        // ==/!=
+        run_test("hello_equality.c", &["--goto-functions-only"], 0);
+        run_test("hello_equality.c", &["--incremental-bmc"], 0);
+        run_test("hello_equality_fail.c", &["--incremental-bmc"], 1);
+    }
+    #[test]
+    #[ignore]
+    fn hello_ptr() {
+        // pointer (address_of)
+        run_test("hello_ptr.c", &["--goto-functions-only"], 0);
+        run_test("hello_ptr.c", &["--incremental-bmc"], 0);
+        run_test("hello_ptr_fail.c", &["--incremental-bmc"], 1);
+    }
+    #[test]
+    #[ignore]
+    fn hello_array() {
+        // array
+        run_test("hello_array.c", &["--goto-functions-only"], 0);
+        run_test("hello_array.c", &["--incremental-bmc"], 0);
+        run_test("hello_array_fail.c", &["--goto-functions-only"], 0);
+        run_test("hello_array_fail.c", &["--incremental-bmc"], 1);
+        run_test("hello_array_fail_oob.c", &["--goto-functions-only"], 0);
+        run_test("hello_array_fail_oob.c", &["--incremental-bmc"], 1);
+        run_test("hello_array_fail_oob.c", &["--no-bounds-check"], 0);
+    }
+    #[test]
+    #[ignore]
+    fn hello_struct() {
+        // Struct
+        run_test("hello_struct.c", &["--goto-functions-only"], 0);
+        run_test("hello_struct.c", &["--incremental-bmc"], 0);
+        run_test("hello_struct_fail.c", &["--incremental-bmc"], 1);
+    }
+    #[test]
+    #[ignore]
+    fn hello_call() {
+        // Function call
+        run_test("hello_func.c", &["--goto-functions-only"], 0);
+        run_test("hello_func.c", &["--incremental-bmc"], 0);
+        run_test("hello_func_fail.c", &["--incremental-bmc"], 1);
+    }
+    #[test]
+    #[ignore]
+    fn hello_goto() {
+        // Goto-Label
+        run_test("hello_label.c", &["--goto-functions-only"], 0);
+        run_test("hello_label.c", &["--k-induction"], 0);
+        run_test("hello_label_fail.c", &["--incremental-bmc"], 1);
+    }
+    #[test]
+    #[ignore]
+    fn hello_if() {
+        // If
+        run_test("hello_if.c", &["--goto-functions-only"], 0);
+        run_test("hello_if.c", &["--incremental-bmc"], 0);
+        run_test("hello_if_fail.c", &["--incremental-bmc"], 1);
+    }
+
+    #[test]
+    #[ignore]
+    fn from_rust() {
+        // These are example taken from the Kani first steps and then translated into C
+    }
+
+    #[test]
+    #[ignore]
+    fn goto_test() {
+        run_goto_test("mul.goto", &["--goto-functions-only"], 0);
     }
 }

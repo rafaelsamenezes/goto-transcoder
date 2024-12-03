@@ -143,6 +143,7 @@ mod esbmcfixes {
                 "dereference",
                 "bitand",
                 "struct",
+                "return",
             ]
             .map(|x| x.to_string()),
         );
@@ -155,7 +156,9 @@ mod esbmcfixes {
             && irep.named_subt["type"].id == "array"
             && irep.subt.len() != 0;
 
-        if expressions.contains(&irep.id) || array_has_operand {
+        let is_function_call = irep.id == "arguments" && irep.subt.len() != 0;
+
+        if expressions.contains(&irep.id) || array_has_operand || is_function_call {
             let mut operands = Irept::default();
             operands.subt = irep.subt.clone();
             irep.named_subt.insert("operands".to_string(), operands);
@@ -276,6 +279,42 @@ impl IrepAdapter for CBMCSymbol {
             result
                 .named_subt
                 .insert("is_type".to_string(), Irept::from("1"));
+        }
+
+        if self.is_macro {
+            result
+                .named_subt
+                .insert("is_macro".to_string(), Irept::from("1"));
+        }
+
+        if self.is_parameter {
+            result
+                .named_subt
+                .insert("is_parameter".to_string(), Irept::from("1"));
+        }
+
+        if self.is_lvalue {
+            result
+                .named_subt
+                .insert("lvalue".to_string(), Irept::from("1"));
+        }
+
+        if self.is_static_lifetime {
+            result
+                .named_subt
+                .insert("static_lifetime".to_string(), Irept::from("1"));
+        }
+
+        if self.is_file_local {
+            result
+                .named_subt
+                .insert("file_local".to_string(), Irept::from("1"));
+        }
+
+        if self.is_extern {
+            result
+                .named_subt
+                .insert("is_extern".to_string(), Irept::from("1"));
         }
 
         result
@@ -543,6 +582,13 @@ impl Irept {
             return;
         }
 
+        if self.id == "code" && self.named_subt.contains_key("parameters") {
+            let subt = self.named_subt["parameters"].subt.clone();
+            let mut arguments = Irept::from("arguments");
+            arguments.subt = subt;
+            self.named_subt.insert("arguments".to_string(), arguments);
+        }
+
         if self.named_subt.contains_key("components") {
             for v in &mut self.named_subt.get_mut("components").unwrap().subt {
                 v.fix_struct();
@@ -792,6 +838,8 @@ mod tests {
         run_test("hello_func.c", &["--goto-functions-only"], 0);
         run_test("hello_func.c", &["--incremental-bmc"], 0);
         run_test("hello_func_fail.c", &["--incremental-bmc"], 1);
+        run_test("hello_func_parameter.c", &["--incremental-bmc"], 0);
+        run_test("hello_func_parameter_fail.c", &["--incremental-bmc"], 1);
     }
     #[test]
     #[ignore]
@@ -821,13 +869,27 @@ mod tests {
 
     #[test]
     #[ignore]
-    fn from_rust() {
-        // These are example taken from the Kani first steps and then translated into C
+    fn goto_test() {
+        run_goto_test("mul.goto", &["--goto-functions-only"], 0);
+    }
+
+    ////////////////
+    // KANI TESTS //
+    ////////////////
+    // TODO: Integrate Kani into the test framework
+
+    #[test]
+    #[ignore]
+    fn hello_rust_book() {
+        run_goto_test("hello_world.rs.goto", &["--goto-functions-only"], 0);
+        run_goto_test("hello_world.rs.goto", &["--incremental-bmc"], 1);
     }
 
     #[test]
     #[ignore]
-    fn goto_test() {
-        run_goto_test("mul.goto", &["--goto-functions-only"], 0);
+    fn first_steps_book() {
+        run_goto_test("first_steps.rs.goto", &["--goto-functions-only"], 0);
+        run_goto_test("first_steps.rs.goto", &["--incremental-bmc"], 1);
+        run_goto_test("first-steps-pass.goto", &["--incremental-bmc"], 0);
     }
 }

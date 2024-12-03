@@ -4,6 +4,7 @@
 
 (defun goto-transcoder-setup ()
   "Set up the project main commands for use with project."
+  (message "GOTO Transcoder Mode Enabled")
   (setq-local compile-command "cargo build"))
 
 (defun goto-transcoder-test ()

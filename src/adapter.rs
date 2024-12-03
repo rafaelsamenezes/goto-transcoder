@@ -100,18 +100,21 @@ mod esbmcfixes {
         }
 
         if irep.id == "constant"
-            && !["pointer", "bool", "array"].contains(&irep.named_subt["type"].id.as_str())
+            && !["pointer", "bool"].contains(&irep.named_subt["type"].id.as_str())
         {
-            // && irep.named_subt.contains_key("#base")
             // Value ID might be the decimal/hexa representation, we want the binary one!
-            let base: u32 = 16;
-            let number = u64::from_str_radix(&irep.named_subt["value"].id, base).unwrap();
-            irep.named_subt.insert(
-                String::from("value"),
-                Irept::from(format!("{:032b}", number)),
-            );
+            let width: usize = irep.named_subt["type"].named_subt["width"]
+                .id
+                .parse()
+                .unwrap();
+            if 32 != irep.named_subt["value"].id.len() {
+                let number = u64::from_str_radix(&irep.named_subt["value"].id, 16).unwrap();
+                irep.named_subt.insert(
+                    String::from("value"),
+                    Irept::from(format!("{:032b}", number)),
+                );
+            }
         }
-
         let expressions: HashSet<String> = HashSet::from(
             [
                 "if",
@@ -139,11 +142,20 @@ mod esbmcfixes {
                 "sideeffect",
                 "dereference",
                 "bitand",
+                "struct",
             ]
             .map(|x| x.to_string()),
         );
 
-        if expressions.contains(&irep.id) {
+        // NOTE: In CBMC both the expression and the type can be named
+        // "array". And even worse, "array" is an umbrella expressions
+        // which can also mean index!
+        let array_has_operand = irep.id == "array"
+            && irep.named_subt.contains_key("type")
+            && irep.named_subt["type"].id == "array"
+            && irep.subt.len() != 0;
+
+        if expressions.contains(&irep.id) || array_has_operand {
             let mut operands = Irept::default();
             operands.subt = irep.subt.clone();
             irep.named_subt.insert("operands".to_string(), operands);
@@ -235,6 +247,7 @@ impl IrepAdapter for CBMCSymbol {
         //result.id = String::from("symbol");
         result.named_subt.insert("type".to_string(), self.stype);
         result.named_subt.insert("symvalue".to_string(), self.value);
+
         result
             .named_subt
             .insert("location".to_string(), self.location);
@@ -249,11 +262,13 @@ impl IrepAdapter for CBMCSymbol {
 
         let name = match self.name.as_str() {
             "__CPROVER__start" => "__ESBMC_main".to_string(),
+            //            "__CPROVER_initialize" => "__ESBMC_init".to_string(),
             _ => self.name.clone(),
         };
 
         let basename = match self.base_name.as_str() {
             "__CPROVER__start" => "__ESBMC_main".to_string(),
+            //          "__CPROVER_initialize" => "__ESBMC_init".to_string(),
             _ => self.base_name.clone(),
         };
 
@@ -500,8 +515,10 @@ impl Irept {
         }
         // ESBMC has no parser for this anon naming conventions.
         let identifier = self.named_subt["identifier"].id.as_bytes();
-        assert!(&identifier[0..10] == "tag-#anon#".as_bytes());
-
+        if identifier.len() < 11 || &identifier[0..10] != "tag-#anon#".as_bytes() {
+            return;
+        }
+        panic!("Got anon struct {}", self.to_string());
         let mut parser = Anon2Struct {
             bytes: Vec::from(identifier),
             counter: 10,
@@ -543,16 +560,15 @@ impl Irept {
             let magic = self.subt[0].clone();
             self.named_subt.insert("subtype".to_string(), magic);
             self.subt.clear();
-            // NOTE: For some unknown reason, CBMC already
-            //provides array sizes in binary
-            // for (k, v) in &mut self.named_subt {
-            //     if k == "size" {
-            //         if v.named_subt.contains_key("value") {
-
-            //             //esbmcfixes::fix_expression(v);
-            //         }
-            //     }
-            // }
+            // NOTE: For some unknown reason, CBMC can't decide whether array
+            //sizes should be in binary or in hexa :)
+            for (k, v) in &mut self.named_subt {
+                if k == "size" {
+                    if v.named_subt.contains_key("value") {
+                        esbmcfixes::fix_expression(v);
+                    }
+                }
+            }
         }
 
         if self.id != "struct_tag" {
@@ -576,8 +592,8 @@ impl Irept {
         }
 
         if !cache.contains_key(&self.named_subt["identifier"]) {
-            panic!("Here {}", self.to_string());
-            //self.expand_anon_struct();
+            trace!("Cache miss {}", self.to_string());
+            self.expand_anon_struct();
             //self.fix_type(cache);
             return;
         }
@@ -757,6 +773,8 @@ mod tests {
         run_test("hello_array_fail_oob.c", &["--goto-functions-only"], 0);
         run_test("hello_array_fail_oob.c", &["--incremental-bmc"], 1);
         run_test("hello_array_fail_oob.c", &["--no-bounds-check"], 0);
+        run_test("hello_array_init.c", &["--goto-functions-only"], 0);
+        run_test("hello_array_init.c", &["--incremental-bmc"], 0);
     }
     #[test]
     #[ignore]
@@ -765,6 +783,7 @@ mod tests {
         run_test("hello_struct.c", &["--goto-functions-only"], 0);
         run_test("hello_struct.c", &["--incremental-bmc"], 0);
         run_test("hello_struct_fail.c", &["--incremental-bmc"], 1);
+        run_test("hello_struct_init.c", &["--incremental-bmc"], 0);
     }
     #[test]
     #[ignore]
@@ -789,6 +808,15 @@ mod tests {
         run_test("hello_if.c", &["--goto-functions-only"], 0);
         run_test("hello_if.c", &["--incremental-bmc"], 0);
         run_test("hello_if_fail.c", &["--incremental-bmc"], 1);
+    }
+
+    #[test]
+    #[ignore]
+    fn struct_array() {
+        // Struct of arrays
+        run_test("struct_array.c", &["--goto-functions-only"], 0);
+        run_test("struct_array.c", &["--incremental-bmc"], 0);
+        run_test("struct_array_fail.c", &["--incremental-bmc"], 1);
     }
 
     #[test]

@@ -25,6 +25,31 @@ trait IrepAdapter {
     fn to_esbmc_irep(self) -> Irept;
 }
 
+pub fn irep_contains(irep: &Irept, id: &str) -> bool {
+    if irep.id == id {
+        return true;
+    }
+
+    for v in &irep.subt {
+        if irep_contains(v, id) {
+            return true;
+        }
+    }
+
+    for (_, v) in &irep.named_subt {
+        if irep_contains(v, id) {
+            return true;
+        }
+    }
+
+    for (_, v) in &irep.comments {
+        if irep_contains(v, id) {
+            return true;
+        }
+    }
+    false
+}
+
 impl From<CBMCParseResult> for ESBMCParseResult {
     fn from(data: CBMCParseResult) -> Self {
         let mut adapted = ESBMCParseResult {
@@ -50,7 +75,10 @@ impl From<CBMCParseResult> for ESBMCParseResult {
         // A symbol might have been defined later, we need to check everything again
         for symbol in &mut adapted.symbols_irep {
             symbol.fix_type(&type_cache);
-            assert_ne!(symbol.named_subt["type"].id, "struct_tag");
+            if irep_contains(symbol, "struct_tag") {
+                panic!("Tag should have been filtered for {}", symbol.to_string());
+            }
+
             assert_ne!(symbol.named_subt["type"].id, "c_bool");
         }
 
@@ -90,6 +118,9 @@ mod esbmcfixes {
     pub fn fix_name(name: &str) -> String {
         match name {
             "__CPROVER__start" => String::from("__ESBMC_main"),
+            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_add_i8" => {
+                "__ESBMC_main".to_string()
+            }
             _ => String::from(name),
         }
     }
@@ -102,11 +133,7 @@ mod esbmcfixes {
         if irep.id == "constant"
             && !["pointer", "bool"].contains(&irep.named_subt["type"].id.as_str())
         {
-            // Value ID might be the decimal/hexa representation, we want the binary one!
-            let width: usize = irep.named_subt["type"].named_subt["width"]
-                .id
-                .parse()
-                .unwrap();
+            // Value ID might be hexa representation or binary, we want the binary one!
             if 32 != irep.named_subt["value"].id.len() {
                 let number = u64::from_str_radix(&irep.named_subt["value"].id, 16).unwrap();
                 irep.named_subt.insert(
@@ -115,6 +142,7 @@ mod esbmcfixes {
                 );
             }
         }
+
         let expressions: HashSet<String> = HashSet::from(
             [
                 "if",
@@ -132,6 +160,7 @@ mod esbmcfixes {
                 "=",
                 "<",
                 ">",
+                "overflow_result-+",
                 "lshr",
                 "shl",
                 "address_of",
@@ -141,6 +170,7 @@ mod esbmcfixes {
                 "array_of",
                 "sideeffect",
                 "dereference",
+                "object_size",
                 "bitand",
                 "struct",
                 "return",
@@ -247,7 +277,6 @@ impl IrepAdapter for CBMCFunction {
 impl IrepAdapter for CBMCSymbol {
     fn to_esbmc_irep(self) -> Irept {
         let mut result = Irept::default();
-        //result.id = String::from("symbol");
         result.named_subt.insert("type".to_string(), self.stype);
         result.named_subt.insert("symvalue".to_string(), self.value);
 
@@ -265,15 +294,22 @@ impl IrepAdapter for CBMCSymbol {
 
         let name = match self.name.as_str() {
             "__CPROVER__start" => "__ESBMC_main".to_string(),
-            //            "__CPROVER_initialize" => "__ESBMC_init".to_string(),
+            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_add_i8" => {
+                "__ESBMC_main".to_string()
+            }
             _ => self.name.clone(),
         };
 
         let basename = match self.base_name.as_str() {
             "__CPROVER__start" => "__ESBMC_main".to_string(),
-            //          "__CPROVER_initialize" => "__ESBMC_init".to_string(),
+            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_add_i8" => {
+                "__ESBMC_main".to_string()
+            }
+
             _ => self.base_name.clone(),
         };
+
+        assert_ne!(basename, "num::verify::checked_unchecked_add_i8");
 
         if self.is_type {
             result
@@ -596,6 +632,9 @@ impl Irept {
         }
 
         if self.id == "pointer" && !self.named_subt.contains_key("subtype") {
+            for v in &mut self.subt {
+                v.fix_type(cache);
+            }
             let mut operands = Irept::default();
             operands.subt = self.subt.clone();
             self.named_subt.insert("subtype".to_string(), operands);
@@ -645,6 +684,21 @@ impl Irept {
         }
 
         *self = cache[&self.named_subt["identifier"]].clone();
+
+        // redo cache
+        if irep_contains(self, "struct_tag") {
+            for v in &mut self.subt {
+                v.fix_type(cache);
+            }
+
+            for (_, v) in &mut self.named_subt {
+                v.fix_type(cache);
+            }
+
+            for (_, v) in &mut self.comments {
+                v.fix_type(cache);
+            }
+        }
     }
 }
 
@@ -891,5 +945,16 @@ mod tests {
         run_goto_test("first_steps.rs.goto", &["--goto-functions-only"], 0);
         run_goto_test("first_steps.rs.goto", &["--incremental-bmc"], 1);
         run_goto_test("first-steps-pass.goto", &["--incremental-bmc"], 0);
+    }
+
+    #[test]
+    #[ignore]
+    fn unchecked_add_contract() {
+        // Disabled because ESBMC does not support: object_size, overflow_result-+
+        // run_goto_test(
+        // "checked_unchecked_add_i8.goto",
+        // &["--goto-functions-only"],
+        // 0,
+        // );
     }
 }

@@ -234,6 +234,6 @@ mod tests {
         let test_path = std::path::Path::new(&cargo_dir).join("resources/test/hello-gb.goto");
         assert!(test_path.exists());
 
-        crate::cbmc::process_cbmc_file(test_path.to_str().unwrap());
+        crate::cbmc::process_cbmc_file(test_path.to_str().unwrap(), "__CPROVER__start");
     }
 }

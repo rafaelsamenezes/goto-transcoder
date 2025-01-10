@@ -51,6 +51,7 @@ enum Commands {
 
 #[derive(Args)]
 struct CmdArgs {
+    entrypoint: String,
     input: std::path::PathBuf,
     output: std::path::PathBuf,
 }
@@ -62,7 +63,11 @@ fn main() {
 
     match cli.command {
         Commands::CBMC2ESBMC(args) => {
-            cbmc2esbmc(&args.input.to_str().unwrap(), args.output.to_str().unwrap());
+            cbmc2esbmc(
+                &args.entrypoint,
+                &args.input.to_str().unwrap(),
+                args.output.to_str().unwrap(),
+            );
         }
         _ => panic!("Command not implemented yet"),
     };

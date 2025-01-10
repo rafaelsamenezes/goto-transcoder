@@ -100,13 +100,15 @@ pub struct CBMCParseResult {
     pub reader: ByteReader,
     pub symbols_irep: Vec<CBMCSymbol>,
     pub functions_irep: Vec<CBMCFunction>,
+    pub entrypoint: String,
 }
 
-pub fn process_cbmc_file(path: &str) -> CBMCParseResult {
+pub fn process_cbmc_file(path: &str, entrypoint: &str) -> CBMCParseResult {
     let mut result = CBMCParseResult {
         reader: ByteReader::read_file(path),
         functions_irep: Vec::new(),
         symbols_irep: Vec::new(),
+        entrypoint: String::from(entrypoint),
     };
 
     result.reader.check_cbmc_header().unwrap();

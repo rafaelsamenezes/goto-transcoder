@@ -9,10 +9,10 @@ use crate::esbmc::ESBMCParseResult;
 use crate::irep::Irept;
 use log::trace;
 
-pub fn cbmc2esbmc(input: &str, output: &str) {
+pub fn cbmc2esbmc(entrypoint: &str, input: &str, output: &str) {
     trace!("cbmc2esbmc mode, {} {}", input, output);
 
-    let result = crate::cbmc::process_cbmc_file(input);
+    let result = crate::cbmc::process_cbmc_file(input, entrypoint);
     std::fs::remove_file(output).ok();
 
     let converted = ESBMCParseResult::from(result);
@@ -22,7 +22,7 @@ pub fn cbmc2esbmc(input: &str, output: &str) {
 }
 
 trait IrepAdapter {
-    fn to_esbmc_irep(self) -> Irept;
+    fn to_esbmc_irep(self, entrypoint: &str) -> Irept;
 }
 
 pub fn irep_contains(irep: &Irept, id: &str) -> bool {
@@ -57,6 +57,7 @@ impl From<CBMCParseResult> for ESBMCParseResult {
             symbols_irep: Vec::with_capacity(data.symbols_irep.len()),
             functions_irep: Vec::with_capacity(data.functions_irep.len()),
         };
+        let entrypoint = &data.entrypoint;
 
         // First, we need to walk through the symbols and map all the
         // ref-types into concrete types
@@ -69,7 +70,7 @@ impl From<CBMCParseResult> for ESBMCParseResult {
                 sym.stype.fix_type(&type_cache);
                 type_cache.insert(tagname, sym.stype.clone());
             }
-            adapted.symbols_irep.push(sym.to_esbmc_irep());
+            adapted.symbols_irep.push(sym.to_esbmc_irep(entrypoint));
         }
 
         // A symbol might have been defined later, we need to check everything again
@@ -102,8 +103,8 @@ impl From<CBMCParseResult> for ESBMCParseResult {
                 }
             }
 
-            let function_name = esbmcfixes::fix_name(&foo.name);
-            let mut function_irep = foo.to_esbmc_irep();
+            let function_name = esbmcfixes::fix_name(&foo.name, entrypoint);
+            let mut function_irep = foo.to_esbmc_irep(entrypoint);
             function_irep.fix_type(&type_cache);
             adapted.functions_irep.push((function_name, function_irep));
         }
@@ -115,32 +116,11 @@ impl From<CBMCParseResult> for ESBMCParseResult {
 mod esbmcfixes {
     use super::HashSet;
     use super::Irept;
-    pub fn fix_name(name: &str) -> String {
-        match name {
-            "__CPROVER__start" => String::from("__ESBMC_main"),
-            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_add_i8" => {
-                "__ESBMC_main".to_string()
-            }
-            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_sub_i8" => {
-                "__ESBMC_main".to_string()
-            }
-            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_mul_i8" => {
-                "__ESBMC_main".to_string()
-            }
-            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_shr_i8" => {
-                "__ESBMC_main".to_string()
-            }
-            "_RNvNtNtCsesPP5EAma4_4core3num6verify25checked_unchecked_add_i16" => {
-                "__ESBMC_main".to_string()
-            }
-            "_RNvNtNtCsesPP5EAma4_4core3num6verify25checked_unchecked_add_i32" => {
-                "__ESBMC_main".to_string()
-            }
-            "_RNvNtNtCsesPP5EAma4_4core3num6verify25checked_unchecked_add_i64" => {
-                "__ESBMC_main".to_string()
-            }
-            _ => String::from(name),
+    pub fn fix_name(name: &str, entry: &str) -> String {
+        if name == entry {
+            return "__ESBMC_main".to_string();
         }
+        return String::from(name);
     }
 
     pub fn fix_expression(irep: &mut Irept) {
@@ -233,7 +213,7 @@ mod esbmcfixes {
 }
 
 impl IrepAdapter for CBMCInstruction {
-    fn to_esbmc_irep(self) -> Irept {
+    fn to_esbmc_irep(self, entrypoint: &str) -> Irept {
         let mut result = Irept::default();
         assert_ne!(self.instr_type, 19);
 
@@ -286,11 +266,11 @@ impl IrepAdapter for CBMCInstruction {
 }
 
 impl IrepAdapter for CBMCFunction {
-    fn to_esbmc_irep(self) -> Irept {
+    fn to_esbmc_irep(self, entrypoint: &str) -> Irept {
         let mut result = Irept::from("goto-program");
         for instr in self.instructions {
             if instr.code.id == "nil" || instr.code.named_subt["statement"].id != "output" {
-                result.subt.push(instr.to_esbmc_irep());
+                result.subt.push(instr.to_esbmc_irep(entrypoint));
             }
         }
         result
@@ -298,7 +278,7 @@ impl IrepAdapter for CBMCFunction {
 }
 
 impl IrepAdapter for CBMCSymbol {
-    fn to_esbmc_irep(self) -> Irept {
+    fn to_esbmc_irep(self, entrypoint: &str) -> Irept {
         let mut result = Irept::default();
         result.named_subt.insert("type".to_string(), self.stype);
         result.named_subt.insert("symvalue".to_string(), self.value);
@@ -315,8 +295,8 @@ impl IrepAdapter for CBMCSymbol {
             .named_subt
             .insert("mode".to_string(), Irept::from(&self.mode));
 
-        let name = esbmcfixes::fix_name(self.name.as_str());
-        let basename = esbmcfixes::fix_name(self.base_name.as_str());
+        let name = esbmcfixes::fix_name(self.name.as_str(), entrypoint);
+        let basename = esbmcfixes::fix_name(self.base_name.as_str(), entrypoint);
 
         assert_ne!(basename, "num::verify::checked_unchecked_add_i8");
 
@@ -786,7 +766,7 @@ mod tests {
 
         generate_cbmc_gbf(test_path.to_str().unwrap(), cbmc_gbf.as_str());
 
-        cbmc2esbmc(cbmc_gbf.as_str(), esbmc_gbf.as_str());
+        cbmc2esbmc("__CPROVER__start", cbmc_gbf.as_str(), esbmc_gbf.as_str());
         run_esbmc_gbf(&esbmc_gbf, args, expected);
         std::fs::remove_file(&cbmc_gbf).ok();
         std::fs::remove_file(&esbmc_gbf).ok();
@@ -801,7 +781,11 @@ mod tests {
             std::path::Path::new(&cargo_dir).join(format!("resources/test/{}", input_goto));
 
         let esbmc_gbf = format!("{}.goto", input_goto); // TODO: generate UUID!
-        cbmc2esbmc(test_path.to_str().unwrap(), esbmc_gbf.as_str());
+        cbmc2esbmc(
+            "__CPROVER__start",
+            test_path.to_str().unwrap(),
+            esbmc_gbf.as_str(),
+        );
         run_esbmc_gbf(&esbmc_gbf, args, expected);
         std::fs::remove_file(&esbmc_gbf).ok();
     }

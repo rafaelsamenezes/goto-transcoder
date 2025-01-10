@@ -315,65 +315,8 @@ impl IrepAdapter for CBMCSymbol {
             .named_subt
             .insert("mode".to_string(), Irept::from(&self.mode));
 
-        let name = match self.name.as_str() {
-            "__CPROVER__start" => "__ESBMC_main".to_string(),
-            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_add_i8" => {
-                "__ESBMC_main".to_string()
-            }
-            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_mul_i8" => {
-                "__ESBMC_main".to_string()
-            }
-            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_neg_i8" => {
-                "__ESBMC_main".to_string()
-            }
-            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_sub_i8" => {
-                "__ESBMC_main".to_string()
-            }
-            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_shr_i8" => {
-                "__ESBMC_main".to_string()
-            }
-            "_RNvNtNtCsesPP5EAma4_4core3num6verify25checked_unchecked_add_i16" => {
-                "__ESBMC_main".to_string()
-            }
-            "_RNvNtNtCsesPP5EAma4_4core3num6verify25checked_unchecked_add_i32" => {
-                "__ESBMC_main".to_string()
-            }
-            "_RNvNtNtCsesPP5EAma4_4core3num6verify25checked_unchecked_add_i64" => {
-                "__ESBMC_main".to_string()
-            }
-
-            _ => self.name.clone(),
-        };
-
-        let basename = match self.base_name.as_str() {
-            "__CPROVER__start" => "__ESBMC_main".to_string(),
-            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_add_i8" => {
-                "__ESBMC_main".to_string()
-            }
-            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_mul_i8" => {
-                "__ESBMC_main".to_string()
-            }
-            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_neg_i8" => {
-                "__ESBMC_main".to_string()
-            }
-            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_sub_i8" => {
-                "__ESBMC_main".to_string()
-            }
-            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_shr_i8" => {
-                "__ESBMC_main".to_string()
-            }
-            "_RNvNtNtCsesPP5EAma4_4core3num6verify25checked_unchecked_add_i16" => {
-                "__ESBMC_main".to_string()
-            }
-            "_RNvNtNtCsesPP5EAma4_4core3num6verify25checked_unchecked_add_i32" => {
-                "__ESBMC_main".to_string()
-            }
-            "_RNvNtNtCsesPP5EAma4_4core3num6verify25checked_unchecked_add_i64" => {
-                "__ESBMC_main".to_string()
-            }
-
-            _ => self.base_name.clone(),
-        };
+        let name = esbmcfixes::fix_name(self.name.as_str());
+        let basename = esbmcfixes::fix_name(self.base_name.as_str());
 
         assert_ne!(basename, "num::verify::checked_unchecked_add_i8");
 

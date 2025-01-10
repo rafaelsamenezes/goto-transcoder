@@ -121,6 +121,24 @@ mod esbmcfixes {
             "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_add_i8" => {
                 "__ESBMC_main".to_string()
             }
+            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_sub_i8" => {
+                "__ESBMC_main".to_string()
+            }
+            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_mul_i8" => {
+                "__ESBMC_main".to_string()
+            }
+            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_shr_i8" => {
+                "__ESBMC_main".to_string()
+            }
+            "_RNvNtNtCsesPP5EAma4_4core3num6verify25checked_unchecked_add_i16" => {
+                "__ESBMC_main".to_string()
+            }
+            "_RNvNtNtCsesPP5EAma4_4core3num6verify25checked_unchecked_add_i32" => {
+                "__ESBMC_main".to_string()
+            }
+            "_RNvNtNtCsesPP5EAma4_4core3num6verify25checked_unchecked_add_i64" => {
+                "__ESBMC_main".to_string()
+            }
             _ => String::from(name),
         }
     }
@@ -161,7 +179,11 @@ mod esbmcfixes {
                 "<",
                 ">",
                 "overflow_result-+",
+                "overflow_result--",
+                "overflow_result-*",
+                "overflow_result-shr",
                 "lshr",
+                "ashr",
                 "shl",
                 "address_of",
                 "index",
@@ -213,6 +235,7 @@ mod esbmcfixes {
 impl IrepAdapter for CBMCInstruction {
     fn to_esbmc_irep(self) -> Irept {
         let mut result = Irept::default();
+        assert_ne!(self.instr_type, 19);
 
         // In ESBMC code arguments are expected to be inside the "operands"
         let mut code = self.code;
@@ -297,12 +320,55 @@ impl IrepAdapter for CBMCSymbol {
             "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_add_i8" => {
                 "__ESBMC_main".to_string()
             }
+            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_mul_i8" => {
+                "__ESBMC_main".to_string()
+            }
+            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_neg_i8" => {
+                "__ESBMC_main".to_string()
+            }
+            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_sub_i8" => {
+                "__ESBMC_main".to_string()
+            }
+            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_shr_i8" => {
+                "__ESBMC_main".to_string()
+            }
+            "_RNvNtNtCsesPP5EAma4_4core3num6verify25checked_unchecked_add_i16" => {
+                "__ESBMC_main".to_string()
+            }
+            "_RNvNtNtCsesPP5EAma4_4core3num6verify25checked_unchecked_add_i32" => {
+                "__ESBMC_main".to_string()
+            }
+            "_RNvNtNtCsesPP5EAma4_4core3num6verify25checked_unchecked_add_i64" => {
+                "__ESBMC_main".to_string()
+            }
+
             _ => self.name.clone(),
         };
 
         let basename = match self.base_name.as_str() {
             "__CPROVER__start" => "__ESBMC_main".to_string(),
             "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_add_i8" => {
+                "__ESBMC_main".to_string()
+            }
+            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_mul_i8" => {
+                "__ESBMC_main".to_string()
+            }
+            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_neg_i8" => {
+                "__ESBMC_main".to_string()
+            }
+            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_sub_i8" => {
+                "__ESBMC_main".to_string()
+            }
+            "_RNvNtNtCsesPP5EAma4_4core3num6verify24checked_unchecked_shr_i8" => {
+                "__ESBMC_main".to_string()
+            }
+            "_RNvNtNtCsesPP5EAma4_4core3num6verify25checked_unchecked_add_i16" => {
+                "__ESBMC_main".to_string()
+            }
+            "_RNvNtNtCsesPP5EAma4_4core3num6verify25checked_unchecked_add_i32" => {
+                "__ESBMC_main".to_string()
+            }
+            "_RNvNtNtCsesPP5EAma4_4core3num6verify25checked_unchecked_add_i64" => {
                 "__ESBMC_main".to_string()
             }
 

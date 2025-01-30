@@ -13,20 +13,38 @@ to catch such as number that was supposed to be 4 is now -42, however some of th
 
 ## Adding test cases
 
-1. Define a goto-cc input or generate an CBMC compatible goto file and add it to `resources/test`
-2. At `main.rs` there two main test functions: `run_goto_test` (CBMC GBF -> ESBMC GBF -> ESBMC run) and `run_test` (GOTO-CC input -> CBMC GBF -> ESBMC GBF -> ESBMC run).
+1. Define a goto-cc input or generate an CBMC compatible goto file and add it to `resources/test`. You can also just create a C source file
+2. At `adapter.rs` you can add the test cases.
+
+For example:
+
+```rust
+#[test]
+#[ignore]
+fn hello_world() {
+  println!("Remember to set GOTO_CC and ESBMC environment variables!");
+  // Basic
+  run_test("hello_world.c", &["--goto-functions-only"], 0);
+  run_test("hello_world.c", &["--incremental-bmc"], 0);
+  run_test("hello_world_fail.c", &["--incremental-bmc"], 1);
+}
+```
+
+The function `run_test(c-file, args, exit-code)` compiles a C code (from `resources/test`) with CBMC, converts to ESBMC, then run it with the `args`. If the exit code from ESBMC matches `exit-code` then the test succeeds.
+
+The `#[ignore]` means that the test will only run by using `cargo test -- --ignored`
 
 ## Debugging expressions
 
 The entry point for the CBMC parsing is the function `process_cbmc_file` inside the `cbmc.rs`. It consists in three main steps:
 1. Header validation. Failures here means that either an incompatible version of CBMC is being used or that the bytereader has problems. Consulting the `read_bin_goto_binary` files and functions inside cbmc can provide some guidance.
-2. Symbol table. All symbols are sequantially parsed into irep expressions, ireps can be printed at any time with a common format `println!("My irep: {}", irep)`
+2. Symbol table. All symbols are sequentially parsed into irep expressions, ireps can be printed at any time with a common format `println!("My irep: {}", irep)`
 3. Function parsing. Each function also contains a set of instructions that is sequentially parsed and associated into the function. Similarly, each function can be printed using the fmt.
 
 ### Fixing CBMC expressions
 
 In case the direct convertion results in a crash or incorrect parameter, it may be because ESBMC is eexpecting the IREP in a 
-different form. The easiest way to debug this is to check `migrate.cpp` at ESBMC and check which parameters are expected.
+different form. The easiest way to debug this is to check `migrate.cpp` of ESBMC and check which parameters are expected.
 
 As an example, one fix that it is needed for expressions is that in CBMC an expression such as 1 + 2 is defined (similarly):
 
@@ -68,7 +86,7 @@ We can know that by checking this specific case `migrate_expr`:
 
 ```
 
-In here, `exprt::plus` is "+" (I highly recommend setting an LSP to ESBMC and CBMC) while `.operands()` access the "operands" field. All these hacks are defined in the function `fix_expression` at `irep.rs`. Adding new expressions is low hanging fruit (see list of equivalences).
+In here, `exprt::plus` is "+" (I highly recommend setting an LSP to ESBMC and CBMC) while `.operands()` access the "operands" field. All these hacks are defined in the function `esbmcfixes::fix_expression` at `adapter.rs`. Adding new expressions is low hanging fruit (see list of equivalences).
 
 
 # List of Irep equivalences
@@ -85,10 +103,10 @@ Here is the tracking of the ireps that were already implemented and have at leas
 | complex    | ?        | N           |
 | floatbv    | ?        | N           |
 | fixedbv    | ?        | N           |
-| bool       | ?        | N           |
-| empty      | ?        | N           |
+| bool       | bool     | Y           |
+| empty      | ?        | Y           |
 | symbol     | ?        | N           |
-| struct     | ?        | N           |
+| struct     | ?        | Y           |
 | union      | ?        | N           |
 | class      | ?        | N           |
 | code       | ?        | N           |
@@ -110,7 +128,7 @@ Here is the tracking of the ireps that were already implemented and have at leas
 | -                  | -           | Y           |
 | *                  | *           | Y           |
 | /                  | /           | Y           |
-| mod                | mod         | N           |
+| mod                | mod         | Y           |
 | =                  | =           | Y           |
 | notequal           | notequal    | Y           |
 | index              | index       | N           |
@@ -119,13 +137,13 @@ Here is the tracking of the ireps that were already implemented and have at leas
 | dynamic-object     | ?           | N           |
 | typecast           | typecast    | Y           |
 | =>                 | ?           | N           |
-| and                | ?           | N           |
+| and                | ?           | Y           |
 | xor                | ?           | N           |
-| or                 | ?           | N           |
-| not                | ?           | N           |
+| or                 | ?           | Y           |
+| not                | ?           | Y           |
 | address-of         | address-of  | Y           |
 | dereference        | dereference | Y           |
-| if                 | ?           | N           |
+| if                 | ?           | Y           |
 | with               | ?           | N           |
 | member             | ?           | N           |
 | isnan              | ?           | N           |
@@ -135,7 +153,7 @@ Here is the tracking of the ireps that were already implemented and have at leas
 | true               | true        | Y           |
 | false              | false       | Y           |
 | <                  | <           | Y           |
-| >                  | >           | N           |
+| >                  | >           | Y           |
 | <=                 | <=          | N           |
 | >=                 | >=          | N           |
 | bitand             | bitand      | N           |
@@ -145,9 +163,9 @@ Here is the tracking of the ireps that were already implemented and have at leas
 | bitnor             | bitnor      | N           |
 | bitnxor            | bitnxor     | N           |
 | bitnot             | bitnot      | N           |
-| ashr               | ashr        | N           |
-| lshr               | lshr        | N           |
-| shl                | shl         | N           |
+| ashr               | ashr        | Y           |
+| lshr               | lshr        | Y           |
+| shl                | shl         | Y           |
 | abs                | abs         | N           |
 | argument           | ?           | N           |
 | sideffect          | ?           | N           |
